@@ -1,14 +1,13 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './views/App.tsx'
+// Content script for Linear Web Clipper
+// This script runs on all pages but does not inject any UI
 
-console.log('[CRXJS] Hello world from content script!')
+console.log('[Linear Web Clipper] Content script loaded')
 
-const container = document.createElement('div')
-container.id = 'crxjs-app'
-document.body.appendChild(container)
-createRoot(container).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Listen for messages from the background script if needed
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  console.log('[Content Script] Received message:', message.type)
+
+  // Handle any content-specific operations here if needed
+  sendResponse({ success: true })
+  return true
+})

@@ -103,18 +103,19 @@ export default function App() {
                 <option value="none">None</option>
                 <option value="openai">OpenAI</option>
                 <option value="anthropic">Anthropic</option>
+                <option value="gemini">Google Gemini</option>
               </select>
             </div>
 
             {settings.aiProvider && settings.aiProvider !== 'none' && (
               <div className="form-group">
                 <label htmlFor="aiApiKey">
-                  {settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'} API Key
+                  {settings.aiProvider === 'openai' ? 'OpenAI' : settings.aiProvider === 'anthropic' ? 'Anthropic' : 'Google Gemini'} API Key
                 </label>
                 <input
                   id="aiApiKey"
                   type="password"
-                  placeholder={settings.aiProvider === 'openai' ? 'sk-...' : 'sk-ant-...'}
+                  placeholder={settings.aiProvider === 'openai' ? 'sk-...' : settings.aiProvider === 'anthropic' ? 'sk-ant-...' : 'AIzaSy...'}
                   value={settings.aiApiKey || ''}
                   onChange={(e) => setSettings({ ...settings, aiApiKey: e.target.value })}
                   autoComplete="off"

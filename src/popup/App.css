@@ -1,187 +1,228 @@
 .popup-container {
-  width: 400px;
-  max-height: 600px;
-  padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #1a1a1a;
-  background: #ffffff;
+    width: 400px;
+    max-height: 600px;
+    padding: 0;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto,
+        sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #1a1523;
+    background: #fafafa;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .popup-header {
-  padding: 20px;
-  background: linear-gradient(135deg, #5e6ad2 0%, #8b5cf6 100%);
-  color: white;
+    padding: 16px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #e6e6e6;
 }
 
 .popup-header h1 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1523;
+    letter-spacing: -0.01em;
 }
 
 .popup-content {
-  padding: 20px;
+    padding: 20px;
+    background: #fafafa;
 }
 
 .success-message {
-  padding: 12px;
-  background: #f0fdf4;
-  color: #15803d;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  font-weight: 500;
+    padding: 10px 12px;
+    background: #ffffff;
+    color: #1a1523;
+    border: 1px solid #e6e6e6;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-weight: 500;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.success-message::before {
+    content: "✓";
+    color: #10b981;
+    font-weight: 600;
 }
 
 .settings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .form-group label {
-  font-weight: 500;
-  font-size: 13px;
-  color: #374151;
+    font-weight: 500;
+    font-size: 12px;
+    color: #6e6d7a;
+    letter-spacing: 0.01em;
 }
 
 .form-group .required {
-  color: #ef4444;
+    color: #ef4444;
 }
 
 .form-group input[type="text"],
 .form-group input[type="password"],
 .form-group select {
-  padding: 8px 12px;
-  font-size: 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: white;
-  transition: all 0.15s;
+    padding: 8px 10px;
+    font-size: 13px;
+    border: 1px solid #e6e6e6;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #1a1523;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.form-group input[type="text"]:hover,
+.form-group input[type="password"]:hover,
+.form-group select:hover {
+    border-color: #d1d1d1;
 }
 
 .form-group input[type="text"]:focus,
 .form-group input[type="password"]:focus,
 .form-group select:focus {
-  outline: none;
-  border-color: #5e6ad2;
-  box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.1);
+    outline: none;
+    border-color: #5e6ad2;
+    background: #ffffff;
+}
+
+.form-group input::placeholder {
+    color: #b4b4b4;
 }
 
 .form-group small {
-  font-size: 12px;
-  color: #6b7280;
+    font-size: 11px;
+    color: #8b8a94;
+    line-height: 1.4;
 }
 
 .form-group small a {
-  color: #5e6ad2;
-  text-decoration: none;
+    color: #5e6ad2;
+    text-decoration: none;
 }
 
 .form-group small a:hover {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 .checkbox-group label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 400;
-  cursor: pointer;
-  user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 400;
+    font-size: 13px;
+    color: #1a1523;
+    cursor: pointer;
+    user-select: none;
 }
 
 .checkbox-group input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: #5e6ad2;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #5e6ad2;
+    border-radius: 3px;
 }
 
 .checkbox-group input[type="checkbox"]:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+    cursor: not-allowed;
+    opacity: 0.4;
 }
 
 .message {
-  padding: 12px;
-  border-radius: 6px;
-  font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    border: 1px solid;
 }
 
 .message.success {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+    background: #f0fdf4;
+    color: #15803d;
+    border-color: #bbf7d0;
 }
 
 .message.error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
 }
 
 .primary-button,
 .secondary-button {
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    font-family: inherit;
+    letter-spacing: -0.01em;
 }
 
 .primary-button {
-  background: #5e6ad2;
-  color: white;
+    background: #5e6ad2;
+    color: white;
+    border: 1px solid #5e6ad2;
 }
 
 .primary-button:hover:not(:disabled) {
-  background: #4c5bc4;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: #4c5bc4;
+    border-color: #4c5bc4;
 }
 
 .primary-button:active:not(:disabled) {
-  background: #3d4ab0;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: #3d4ab0;
+    border-color: #3d4ab0;
 }
 
 .primary-button:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-  opacity: 0.6;
+    background: #e6e6e6;
+    border-color: #e6e6e6;
+    color: #b4b4b4;
+    cursor: not-allowed;
 }
 
 .secondary-button {
-  background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
-  margin-top: 8px;
+    background: #ffffff;
+    color: #6e6d7a;
+    border: 1px solid #e6e6e6;
+    margin-top: 8px;
 }
 
 .secondary-button:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
+    background: #fafafa;
+    border-color: #d1d1d1;
+    color: #1a1523;
 }
 
 .secondary-button:active {
-  background: #f3f4f6;
+    background: #f0f0f0;
 }
 
-/* Focus visible styles for accessibility */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #5e6ad2;
-  outline-offset: 2px;
+    outline: 2px solid #5e6ad2;
+    outline-offset: 2px;
 }

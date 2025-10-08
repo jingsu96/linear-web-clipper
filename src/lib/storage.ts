@@ -4,7 +4,7 @@
 
 export interface StorageSettings {
   linearApiKey?: string
-  aiProvider?: 'openai' | 'anthropic' | 'none'
+  aiProvider?: 'openai' | 'anthropic' | 'gemini' | 'none'
   aiApiKey?: string
   defaultTeamId?: string
   defaultProjectId?: string

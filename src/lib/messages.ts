@@ -55,6 +55,7 @@ export async function createLinearIssue(payload: {
   projectId?: string
   title: string
   description: string
+  summary?: string
   apiKey: string
 }) {
   return sendMessage({
@@ -69,7 +70,7 @@ export async function createLinearIssue(payload: {
 export async function summarizeContent(payload: {
   content: string
   apiKey: string
-  provider: 'openai' | 'anthropic'
+  provider: 'openai' | 'anthropic' | 'gemini'
 }) {
   return sendMessage({
     type: 'SUMMARIZE_CONTENT',

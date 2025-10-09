@@ -1,8 +1,33 @@
 {
   "name": "linear-web-clipper",
-  "type": "module",
   "version": "1.0.0",
+  "description": "Chrome extension to clip web pages and YouTube transcripts, creating Linear issues with AI-powered summarization and formatting",
+  "type": "module",
   "private": true,
+  "license": "MIT",
+  "author": "Jinghuang Su",
+  "keywords": [
+    "chrome-extension",
+    "linear",
+    "web-clipper",
+    "youtube-transcript",
+    "markdown",
+    "ai-summarization",
+    "content-extraction",
+    "productivity",
+    "note-taking",
+    "readability",
+    "openai",
+    "anthropic",
+    "gemini"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jingsu96/linear-web-clipper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jingsu96/linear-web-clipper/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

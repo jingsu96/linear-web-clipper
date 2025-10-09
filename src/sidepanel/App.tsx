@@ -5,6 +5,7 @@ import {
   createLinearIssue,
   summarizeContent,
   getLinearData,
+  reformatTranscript,
 } from "@/lib/messages";
 import {
   formatAsMarkdown,
@@ -47,6 +48,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [summarizing, setSummarizing] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [reformatting, setReformatting] = useState(false);
 
   useEffect(() => {
     initialize();
@@ -55,16 +57,25 @@ export default function App() {
   useEffect(() => {
     if (content && settings) {
       const md = formatAsMarkdown(content, settings.includeMetadata);
-      setMarkdown(md);
-      setIssueTitle(content.title);
 
-      // Auto-summarize if enabled
-      if (
-        settings.autoSummarize &&
-        settings.aiProvider &&
-        settings.aiProvider !== "none"
-      ) {
-        handleSummarize();
+      // Check if this is a YouTube transcript
+      const isYouTubeTranscript = content.metaDescription === "YouTube Video Transcript";
+
+      if (isYouTubeTranscript && settings.aiProvider && settings.aiProvider !== "none" && settings.aiApiKey) {
+        // Automatically reformat YouTube transcripts to article format
+        handleReformatTranscript(md);
+      } else {
+        setMarkdown(md);
+        setIssueTitle(content.title);
+
+        // Auto-summarize if enabled (for non-YouTube content)
+        if (
+          settings.autoSummarize &&
+          settings.aiProvider &&
+          settings.aiProvider !== "none"
+        ) {
+          handleSummarize(md);
+        }
       }
     }
   }, [content, settings]);
@@ -87,15 +98,12 @@ export default function App() {
 
       // Fetch Linear data
       const linearData = await getLinearData();
-      console.log("[Sidepanel] Linear data received:", linearData);
 
       if (linearData.success && linearData.data) {
         const data = linearData.data as {
           teams: LinearTeam[];
           projects: LinearProject[];
         };
-        console.log("[Sidepanel] Teams:", data.teams);
-        console.log("[Sidepanel] Projects:", data.projects);
 
         setTeams(data.teams);
         setProjects(data.projects);
@@ -138,7 +146,56 @@ export default function App() {
     }
   }
 
-  async function handleSummarize() {
+  async function handleReformatTranscript(transcriptMarkdown: string) {
+    if (
+      !settings.aiProvider ||
+      settings.aiProvider === "none" ||
+      !settings.aiApiKey
+    ) {
+      // If AI is not configured, just use the raw transcript
+      setMarkdown(transcriptMarkdown);
+      setIssueTitle(content?.title || "");
+      return;
+    }
+
+    setReformatting(true);
+    setStatus("Reformatting transcript to article format...");
+    setError("");
+
+    try {
+      const result = await reformatTranscript({
+        content: transcriptMarkdown,
+        apiKey: settings.aiApiKey,
+        provider: settings.aiProvider,
+      });
+
+      if (result.success && result.data) {
+        const reformattedContent = (result.data as { reformattedContent: string }).reformattedContent;
+        setMarkdown(reformattedContent);
+        setIssueTitle(content?.title || "");
+        setStatus("Transcript reformatted successfully!");
+        setTimeout(() => setStatus(""), 3000);
+      } else {
+        const errorMsg = result.error || "Failed to reformat transcript";
+        setError(errorMsg);
+        // Fall back to raw transcript
+        setMarkdown(transcriptMarkdown);
+        setIssueTitle(content?.title || "");
+      }
+    } catch (err) {
+      console.error("[Sidepanel] Reformatting error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to reformat transcript",
+      );
+      // Fall back to raw transcript
+      setMarkdown(transcriptMarkdown);
+      setIssueTitle(content?.title || "");
+    } finally {
+      setReformatting(false);
+    }
+  }
+
+  async function handleSummarize(contentToSummarize?: string) {
     if (
       !settings.aiProvider ||
       settings.aiProvider === "none" ||
@@ -148,7 +205,10 @@ export default function App() {
       return;
     }
 
-    if (!markdown) {
+    // Use provided content or fall back to markdown state
+    const content = contentToSummarize || markdown;
+
+    if (!content) {
       setError("No content to summarize");
       return;
     }
@@ -157,19 +217,11 @@ export default function App() {
     setError("");
 
     try {
-      console.log('[Sidepanel] Starting summarization with:', {
-        provider: settings.aiProvider,
-        hasApiKey: !!settings.aiApiKey,
-        contentLength: markdown.length
-      });
-
       const result = await summarizeContent({
-        content: markdown,
+        content: content,
         apiKey: settings.aiApiKey,
         provider: settings.aiProvider,
       });
-
-      console.log('[Sidepanel] Summarization result:', result);
 
       if (result.success && result.data) {
         setSummary((result.data as { summary: string }).summary);
@@ -177,7 +229,6 @@ export default function App() {
         setTimeout(() => setStatus(""), 3000);
       } else {
         const errorMsg = result.error || "Failed to generate summary";
-        console.error('[Sidepanel] Summarization failed:', errorMsg);
         setError(errorMsg);
       }
     } catch (err) {
@@ -274,7 +325,7 @@ export default function App() {
     );
   }
 
-  if (loading) {
+  if (loading || reformatting) {
     return (
       <div className="sidepanel-container">
         <div className="sidepanel-header">
@@ -283,7 +334,7 @@ export default function App() {
         <div className="sidepanel-content">
           <div className="loading-state">
             <div className="spinner" />
-            <p>Extracting page content...</p>
+            <p>{reformatting ? "Reformatting transcript to article format..." : "Extracting page content..."}</p>
           </div>
         </div>
       </div>
@@ -339,7 +390,7 @@ export default function App() {
                   <button
                     type="button"
                     className="secondary-button"
-                    onClick={handleSummarize}
+                    onClick={() => handleSummarize()}
                     disabled={summarizing}
                   >
                     {summarizing ? "Summarizing..." : "Generate Summary"}

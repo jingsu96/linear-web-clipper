@@ -3,11 +3,8 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-console.log("[Linear Web Clipper] Background service worker initialized");
-
 // Listen for messages from content scripts and sidepanel
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("[Background] Received message:", message.type);
 
   if (message.type === "EXTRACT_CONTENT") {
     handleExtractContent(sender.tab?.id)
@@ -32,14 +29,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "GET_LINEAR_DATA") {
     handleGetLinearData()
-      .then((data) => {
-        console.log("[Background] Sending response:", data);
-        sendResponse(data);
-      })
+      .then(sendResponse)
       .catch((error) => {
         console.error("[Background] Error:", error);
         sendResponse({ success: false, error: error.message });
       });
+    return true;
+  }
+
+  if (message.type === "REFORMAT_TRANSCRIPT") {
+    handleReformatTranscript(message.payload)
+      .then((result) => sendResponse({ success: true, data: result }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
 });
@@ -92,6 +93,160 @@ function extractPageContent() {
     const title = document.title;
     const url = window.location.href;
 
+    // Check if this is a YouTube video page
+    if (url.includes("youtube.com/watch")) {
+      // YouTube transcript extraction logic (inline to work with chrome.scripting.executeScript)
+      return (async () => {
+        try {
+          // Helper function to wait for element
+          const waitForElement = (
+            selector: string,
+            timeout = 5000,
+          ): Promise<Element | null> => {
+            return new Promise((resolve) => {
+              const element = document.querySelector(selector);
+              if (element) {
+                resolve(element);
+                return;
+              }
+
+              const observer = new MutationObserver(() => {
+                const element = document.querySelector(selector);
+                if (element) {
+                  observer.disconnect();
+                  resolve(element);
+                }
+              });
+
+              observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+              });
+
+              setTimeout(() => {
+                observer.disconnect();
+                resolve(null);
+              }, timeout);
+            });
+          };
+
+          // Helper function to click and wait
+          const clickAndWait = async (
+            element: Element,
+            delay = 500,
+          ): Promise<void> => {
+            (element as HTMLElement).click();
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          };
+
+          // Step 1: Click the expand button to show full description
+          const expandButton = document.querySelector("#expand") as HTMLElement;
+          if (!expandButton) {
+            throw new Error(
+              "Could not find expand button. Make sure you are on a YouTube video page.",
+            );
+          }
+
+          await clickAndWait(expandButton, 1000);
+
+          // Step 2: Find and click the "Show transcript" button
+          // Try multiple selectors as YouTube's UI changes
+          let transcriptButton: Element | null = null;
+
+          // Try finding by button text content
+          const buttons = Array.from(document.querySelectorAll("button"));
+          transcriptButton =
+            buttons.find(
+              (btn) =>
+                btn.textContent?.toLowerCase().includes("transcript") ||
+                btn.textContent?.toLowerCase().includes("show transcript"),
+            ) || null;
+
+          // If not found, try the structural selector
+          if (!transcriptButton) {
+            transcriptButton = await waitForElement(
+              "ytd-video-description-transcript-section-renderer button",
+              3000,
+            );
+          }
+
+          if (!transcriptButton) {
+            throw new Error(
+              "Could not find transcript button. This video may not have a transcript available.",
+            );
+          }
+
+          await clickAndWait(transcriptButton, 1500);
+
+          // Step 3: Wait for transcript segments to load
+          await waitForElement("ytd-transcript-segment-renderer", 3000);
+
+          // Step 4: Extract transcript data
+          const segments = Array.from(
+            document.querySelectorAll("ytd-transcript-segment-renderer"),
+          );
+
+          if (segments.length === 0) {
+            throw new Error(
+              "No transcript segments found. This video may not have a transcript available.",
+            );
+          }
+
+          const transcript = segments
+            .map((segment) => {
+              const timestamp = segment
+                .querySelector(".segment-timestamp")
+                ?.textContent?.trim();
+              const text = (segment as HTMLElement).innerText.split("\n")[1];
+
+              if (!text?.trim()) return null;
+
+              return { time: timestamp, text: text };
+            })
+            .filter(
+              (entry): entry is { time: string | undefined; text: string } =>
+                entry !== null,
+            );
+
+          // Format transcript as HTML for markdown conversion
+          const transcriptHtml = transcript
+            .map(
+              (entry) =>
+                `<p><strong>${entry.time || "0:00"}</strong> ${entry.text}</p>`,
+            )
+            .join("\n");
+
+          // Format transcript as plain text
+          const transcriptText = transcript
+            .map((entry) => `${entry.time || "0:00"} ${entry.text}`)
+            .join("\n");
+
+          return {
+            title,
+            url,
+            htmlContent: transcriptHtml,
+            textContent: transcriptText,
+            metaDescription: "YouTube Video Transcript",
+            timestamp: new Date().toISOString(),
+          };
+        } catch (error) {
+          console.error("[YouTube Transcript] Extraction error:", error);
+          return {
+            title: document.title,
+            url: window.location.href,
+            htmlContent: "",
+            textContent: "",
+            metaDescription: "",
+            timestamp: new Date().toISOString(),
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unknown error extracting YouTube transcript",
+          };
+        }
+      })();
+    }
+
     // Use Readability to extract main content
     // @ts-ignore - Readability is imported globally
     const { Readability } = window as any;
@@ -105,20 +260,15 @@ function extractPageContent() {
       const article = reader.parse();
 
       if (article && article.content) {
-        console.log("[Content Extractor] Using Readability to extract content");
         // Create a temporary container for the extracted content
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = article.content;
         articleElement = tempDiv;
       } else {
-        console.warn(
-          "[Content Extractor] Readability failed, falling back to body",
-        );
         articleElement = document.body;
       }
     } else {
       // Fallback if Readability is not available
-      console.warn("[Content Extractor] Readability not available, using body");
       articleElement = document.body;
     }
 
@@ -314,14 +464,6 @@ async function handleCreateLinearIssue(payload: {
 }) {
   const { teamId, projectId, title, description, summary, apiKey } = payload;
 
-  console.log("[Background] Creating issue with:", {
-    teamId,
-    projectId,
-    title,
-    descriptionLength: description.length,
-    hasSummary: !!summary,
-  });
-
   try {
     // Truncate description if too long (Linear limit is 250,000 characters)
     const MAX_DESCRIPTION_LENGTH = 250000;
@@ -376,8 +518,6 @@ async function handleCreateLinearIssue(payload: {
 
     const result = await response.json();
 
-    console.log("[Background] Issue creation response:", result);
-
     if (result.errors) {
       console.error("[Background] GraphQL errors:", result.errors);
       const errorMsg = result.errors[0].extensions?.validationErrors
@@ -390,7 +530,6 @@ async function handleCreateLinearIssue(payload: {
 
     // If summary exists, add it as a comment
     if (summary) {
-      console.log("[Background] Adding summary as comment");
       await addCommentToIssue(issue.id, summary, apiKey);
     }
 
@@ -440,11 +579,95 @@ async function addCommentToIssue(
       console.error("[Background] Failed to add comment:", result.errors);
       throw new Error(result.errors[0].message);
     }
-
-    console.log("[Background] Comment added successfully");
   } catch (error) {
     console.error("[Background] Failed to add comment:", error);
     // Don't throw - issue was created successfully, comment is optional
+  }
+}
+
+// Handle transcript reformatting (converts transcript to article format)
+async function handleReformatTranscript(payload: {
+  content: string;
+  apiKey: string;
+  provider: "openai" | "anthropic" | "gemini";
+}) {
+  const { content, apiKey, provider } = payload;
+
+  try {
+    let model;
+
+    switch (provider) {
+      case "openai":
+        const openai = createOpenAI({ apiKey });
+        model = openai("gpt-4o-mini");
+        break;
+      case "anthropic":
+        const anthropic = createAnthropic({ apiKey });
+        model = anthropic("claude-3-5-haiku-20241022");
+        break;
+      case "gemini":
+        const google = createGoogleGenerativeAI({ apiKey });
+        model = google("gemini-2.0-flash");
+        break;
+      default:
+        throw new Error("Unsupported AI provider");
+    }
+
+    const MAX_CHARS = 30000;
+
+    if (content.length <= MAX_CHARS) {
+      const { text } = await generateText({
+        model,
+        prompt: `You are given a YouTube video transcript with timestamps. Your task is to rewrite this transcript into a well-structured, flowing article format while keeping ALL the original content intact.
+
+Instructions:
+1. Remove the timestamp markers (e.g., "0:00", "1:23")
+2. Combine sentence fragments into complete, coherent sentences
+3. Organize the content into logical paragraphs based on topic changes
+4. Add appropriate section headings (using ##) where there are clear topic transitions
+5. Maintain ALL the original information - don't summarize or omit anything
+6. Fix any transcription errors or awkward phrasings
+7. Use proper punctuation and grammar
+8. Keep the tone conversational if the original was conversational
+
+The output should read like a natural article, not a transcript. Here's the transcript:
+
+${content}`,
+      });
+
+      return {
+        reformattedContent: text,
+      };
+    } else {
+      // For very long transcripts, process in chunks
+      const CHUNK_SIZE = 25000;
+      const chunks: string[] = [];
+      for (let i = 0; i < content.length; i += CHUNK_SIZE) {
+        chunks.push(content.slice(i, i + CHUNK_SIZE));
+      }
+
+      // Reformat each chunk
+      const reformattedChunks = await Promise.all(
+        chunks.map(async (chunk, index) => {
+          const { text } = await generateText({
+            model,
+            prompt: `This is part ${index + 1} of ${chunks.length} of a YouTube video transcript. Rewrite it into flowing article format while keeping ALL content. Remove timestamps, combine fragments, fix grammar, but don't omit anything:\n\n${chunk}`,
+          });
+          return text;
+        }),
+      );
+
+      // Combine the reformatted chunks
+      const combinedArticle = reformattedChunks.join("\n\n");
+
+      return {
+        reformattedContent: combinedArticle,
+      };
+    }
+  } catch (error) {
+    console.error("[Background] Transcript reformatting failed:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Transcript reformatting failed: ${errorMessage}`);
   }
 }
 
@@ -483,7 +706,7 @@ async function handleSummarizeContent(payload: {
       // Direct summarization for small content
       const { text } = await generateText({
         model,
-        prompt: `Please summarize the following web page content concisely. Focus on key points and main ideas:\n\n${content}`,
+        prompt: `Please summarize the following content concisely. Focus on key points and main ideas:\n\n${content}`,
       });
 
       return {
@@ -492,13 +715,7 @@ async function handleSummarizeContent(payload: {
       };
     } else {
       // Hierarchical summarization for large content
-      console.log(
-        "[Background] Content too large, using hierarchical summarization",
-      );
-
-      // Split content by h2 sections
       const sections = splitContentBySections(content);
-      console.log(`[Background] Split into ${sections.length} sections`);
 
       // Summarize each section
       const sectionSummaries = await Promise.all(
@@ -610,7 +827,6 @@ async function handleGetLinearData() {
 
     // Transform the nested structure to flat lists
     const teams = result.data.teams.nodes;
-    console.log("[Background] Raw teams data:", teams);
 
     const projects = teams.flatMap((team: any) =>
       team.projects.nodes.map((project: any) => ({
@@ -628,17 +844,13 @@ async function handleGetLinearData() {
       key: team.key,
     }));
 
-    const transformedData = {
+    return {
       success: true,
       data: {
         teams: teamsData,
         projects,
       },
     };
-
-    console.log("[Background] Transformed data:", transformedData);
-
-    return transformedData;
   } catch (error) {
     console.error("[Background] Failed to fetch Linear data:", error);
     throw error;

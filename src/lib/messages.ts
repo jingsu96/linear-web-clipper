@@ -7,6 +7,7 @@ export type MessageType =
   | 'CREATE_LINEAR_ISSUE'
   | 'SUMMARIZE_CONTENT'
   | 'GET_LINEAR_DATA'
+  | 'REFORMAT_TRANSCRIPT'
 
 export interface Message<T = unknown> {
   type: MessageType
@@ -84,5 +85,19 @@ export async function summarizeContent(payload: {
 export async function getLinearData() {
   return sendMessage({
     type: 'GET_LINEAR_DATA',
+  })
+}
+
+/**
+ * Reformat transcript to article format using AI
+ */
+export async function reformatTranscript(payload: {
+  content: string
+  apiKey: string
+  provider: 'openai' | 'anthropic' | 'gemini'
+}) {
+  return sendMessage({
+    type: 'REFORMAT_TRANSCRIPT',
+    payload,
   })
 }

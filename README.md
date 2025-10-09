@@ -5,8 +5,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-blue.svg)](https://chrome.google.com/webstore)
 
+## Demo
 
-[![Demo Video](https://imgs.jinghuangsu.com/linear-web-clipper.mov)](https://imgs.jinghuangsu.com/linear-web-clipper.mov)
+[![Watch Demo](https://img.youtube.com/vi/l8bcRzbNW6U/maxresdefault.jpg)](https://www.youtube.com/watch?v=l8bcRzbNW6U)
+
+[▶️ Watch Demo Video](https://www.youtube.com/watch?v=l8bcRzbNW6U)
 
 ## Features
 

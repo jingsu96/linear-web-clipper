@@ -59,9 +59,15 @@ export default function App() {
       const md = formatAsMarkdown(content, settings.includeMetadata);
 
       // Check if this is a YouTube transcript
-      const isYouTubeTranscript = content.metaDescription === "YouTube Video Transcript";
+      const isYouTubeTranscript =
+        content.metaDescription === "YouTube Video Transcript";
 
-      if (isYouTubeTranscript && settings.aiProvider && settings.aiProvider !== "none" && settings.aiApiKey) {
+      if (
+        isYouTubeTranscript &&
+        settings.aiProvider &&
+        settings.aiProvider !== "none" &&
+        settings.aiApiKey
+      ) {
         // Automatically reformat YouTube transcripts to article format
         handleReformatTranscript(md);
       } else {
@@ -170,7 +176,9 @@ export default function App() {
       });
 
       if (result.success && result.data) {
-        const reformattedContent = (result.data as { reformattedContent: string }).reformattedContent;
+        const reformattedContent = (
+          result.data as { reformattedContent: string }
+        ).reformattedContent;
         setMarkdown(reformattedContent);
         setIssueTitle(content?.title || "");
         setStatus("Transcript reformatted successfully!");
@@ -334,7 +342,11 @@ export default function App() {
         <div className="sidepanel-content">
           <div className="loading-state">
             <div className="spinner" />
-            <p>{reformatting ? "Reformatting transcript to article format..." : "Extracting page content..."}</p>
+            <p>
+              {reformatting
+                ? "Reformatting transcript to article format..."
+                : "Extracting page content..."}
+            </p>
           </div>
         </div>
       </div>
@@ -345,16 +357,51 @@ export default function App() {
     <div className="sidepanel-container">
       <div className="sidepanel-header">
         <h1>Linear Web Clipper</h1>
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => initialize()}
-          disabled={loading}
-          aria-label="Refresh content"
-          title="Refresh content"
-        >
-          ↻
-        </button>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => initialize()}
+            disabled={loading}
+            aria-label="Refresh content"
+            title="Refresh content"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+              <path d="M21 3v5h-5" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={openSettings}
+            aria-label="Open settings"
+            title="Open settings"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="sidepanel-content">

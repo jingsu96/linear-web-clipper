@@ -3,40 +3,40 @@
  */
 
 export type MessageType =
-  | 'EXTRACT_CONTENT'
-  | 'CREATE_LINEAR_ISSUE'
-  | 'SUMMARIZE_CONTENT'
-  | 'GET_LINEAR_DATA'
-  | 'REFORMAT_TRANSCRIPT'
+  | "EXTRACT_CONTENT"
+  | "CREATE_LINEAR_ISSUE"
+  | "SUMMARIZE_CONTENT"
+  | "GET_LINEAR_DATA"
+  | "REFORMAT_TRANSCRIPT";
 
 export interface Message<T = unknown> {
-  type: MessageType
-  payload?: T
+  type: MessageType;
+  payload?: T;
 }
 
 export interface MessageResponse<T = unknown> {
-  success: boolean
-  data?: T
-  error?: string
+  success: boolean;
+  data?: T;
+  error?: string;
 }
 
 /**
  * Send a message to the background service worker
  */
 export function sendMessage<T = unknown, R = unknown>(
-  message: Message<T>
+  message: Message<T>,
 ): Promise<MessageResponse<R>> {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(message, (response: MessageResponse<R>) => {
       if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message))
+        reject(new Error(chrome.runtime.lastError.message));
       } else if (response?.error) {
-        reject(new Error(response.error))
+        reject(new Error(response.error));
       } else {
-        resolve(response)
+        resolve(response);
       }
-    })
-  })
+    });
+  });
 }
 
 /**
@@ -44,39 +44,39 @@ export function sendMessage<T = unknown, R = unknown>(
  */
 export async function extractContent() {
   return sendMessage({
-    type: 'EXTRACT_CONTENT',
-  })
+    type: "EXTRACT_CONTENT",
+  });
 }
 
 /**
  * Create a Linear issue
  */
 export async function createLinearIssue(payload: {
-  teamId: string
-  projectId?: string
-  title: string
-  description: string
-  summary?: string
-  apiKey: string
+  teamId: string;
+  projectId?: string;
+  title: string;
+  description: string;
+  summary?: string;
+  apiKey: string;
 }) {
   return sendMessage({
-    type: 'CREATE_LINEAR_ISSUE',
+    type: "CREATE_LINEAR_ISSUE",
     payload,
-  })
+  });
 }
 
 /**
  * Summarize content using AI
  */
 export async function summarizeContent(payload: {
-  content: string
-  apiKey: string
-  provider: 'openai' | 'anthropic' | 'gemini'
+  content: string;
+  apiKey: string;
+  provider: "openai" | "anthropic" | "gemini" | "deepseek" | "grok";
 }) {
   return sendMessage({
-    type: 'SUMMARIZE_CONTENT',
+    type: "SUMMARIZE_CONTENT",
     payload,
-  })
+  });
 }
 
 /**
@@ -84,20 +84,20 @@ export async function summarizeContent(payload: {
  */
 export async function getLinearData() {
   return sendMessage({
-    type: 'GET_LINEAR_DATA',
-  })
+    type: "GET_LINEAR_DATA",
+  });
 }
 
 /**
  * Reformat transcript to article format using AI
  */
 export async function reformatTranscript(payload: {
-  content: string
-  apiKey: string
-  provider: 'openai' | 'anthropic' | 'gemini'
+  content: string;
+  apiKey: string;
+  provider: "openai" | "anthropic" | "gemini" | "deepseek" | "grok";
 }) {
   return sendMessage({
-    type: 'REFORMAT_TRANSCRIPT',
+    type: "REFORMAT_TRANSCRIPT",
     payload,
-  })
+  });
 }

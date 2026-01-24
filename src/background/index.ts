@@ -5,7 +5,6 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 // Listen for messages from content scripts and sidepanel
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-
   if (message.type === "EXTRACT_CONTENT") {
     handleExtractContent(sender.tab?.id)
       .then(sendResponse)
@@ -589,7 +588,7 @@ async function addCommentToIssue(
 async function handleReformatTranscript(payload: {
   content: string;
   apiKey: string;
-  provider: "openai" | "anthropic" | "gemini";
+  provider: "openai" | "anthropic" | "gemini" | "deepseek" | "grok";
 }) {
   const { content, apiKey, provider } = payload;
 
@@ -608,6 +607,20 @@ async function handleReformatTranscript(payload: {
       case "gemini":
         const google = createGoogleGenerativeAI({ apiKey });
         model = google("gemini-2.0-flash");
+        break;
+      case "deepseek":
+        const deepseek = createOpenAI({
+          apiKey,
+          baseURL: "https://api.deepseek.com/v1",
+        });
+        model = deepseek("deepseek-chat");
+        break;
+      case "grok":
+        const grok = createOpenAI({
+          apiKey,
+          baseURL: "https://api.x.ai/v1",
+        });
+        model = grok("grok-2-latest");
         break;
       default:
         throw new Error("Unsupported AI provider");
@@ -675,7 +688,7 @@ ${content}`,
 async function handleSummarizeContent(payload: {
   content: string;
   apiKey: string;
-  provider: "openai" | "anthropic" | "gemini";
+  provider: "openai" | "anthropic" | "gemini" | "deepseek" | "grok";
 }) {
   const { content, apiKey, provider } = payload;
 
@@ -694,6 +707,20 @@ async function handleSummarizeContent(payload: {
       case "gemini":
         const google = createGoogleGenerativeAI({ apiKey });
         model = google("gemini-2.0-flash");
+        break;
+      case "deepseek":
+        const deepseek = createOpenAI({
+          apiKey,
+          baseURL: "https://api.deepseek.com/v1",
+        });
+        model = deepseek("deepseek-chat");
+        break;
+      case "grok":
+        const grok = createOpenAI({
+          apiKey,
+          baseURL: "https://api.x.ai/v1",
+        });
+        model = grok("grok-2-latest");
         break;
       default:
         throw new Error("Unsupported AI provider");

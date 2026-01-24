@@ -46,6 +46,12 @@ body {
     letter-spacing: -0.01em;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
 /* Updated icon button to Linear's subtle style */
 .icon-button {
     width: 28px;
@@ -72,6 +78,10 @@ body {
 .icon-button:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+.icon-button svg {
+    display: block;
 }
 
 .sidepanel-content {

@@ -27,6 +27,7 @@ export interface StorageSettings {
   includeMetadata?: boolean;
   autoSummarize?: boolean;
   summaryStyle?: SummaryStyle;
+  summaryLanguage?: string;
   customSummaryPrompt?: string;
 }
 
@@ -129,6 +130,7 @@ export async function getSettings(): Promise<StorageSettings> {
     "includeMetadata",
     "autoSummarize",
     "summaryStyle",
+    "summaryLanguage",
     "customSummaryPrompt",
   ]);
 
@@ -144,6 +146,7 @@ export async function getSettings(): Promise<StorageSettings> {
     includeMetadata: result.includeMetadata !== false, // default true
     autoSummarize: result.autoSummarize || false,
     summaryStyle: result.summaryStyle || "concise",
+    summaryLanguage: result.summaryLanguage || "English",
     customSummaryPrompt: result.customSummaryPrompt || "",
   };
 }

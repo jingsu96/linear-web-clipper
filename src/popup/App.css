@@ -190,6 +190,13 @@ body {
     line-height: 1.4;
 }
 
+/* Section divider */
+.section-divider {
+    height: 1px;
+    background: #e6e6e6;
+    margin: 20px 0;
+}
+
 /* Form groups */
 .form-group {
     display: flex;

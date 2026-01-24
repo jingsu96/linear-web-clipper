@@ -10,6 +10,34 @@ import {
 import type { StorageSettings, AIProvider, SummaryStyle } from "@/lib/storage";
 import "./App.css";
 
+const LANGUAGES = [
+  "English",
+  "Spanish",
+  "Mandarin Chinese (Simplified)",
+  "Traditional Chinese",
+  "Hindi",
+  "French",
+  "Standard Arabic",
+  "Bengali",
+  "Russian",
+  "Portuguese",
+  "Urdu",
+  "Indonesian",
+  "German",
+  "Japanese",
+  "Swahili",
+  "Marathi",
+  "Telugu",
+  "Turkish",
+  "Tamil",
+  "Punjabi",
+  "Korean",
+  "Vietnamese",
+  "Thai",
+  "Italian",
+  "Dutch",
+];
+
 type SettingsTab = "linear" | "ai" | "summary" | "preferences";
 
 const AI_PROVIDERS: {
@@ -420,6 +448,32 @@ export default function App() {
             role="tabpanel"
             data-active={activeTab === "summary"}
           >
+            <div className="section-header">
+              <h2>Language</h2>
+              <p className="section-description">
+                Select the language for generated summaries.
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="summaryLanguage">Output Language</label>
+              <select
+                id="summaryLanguage"
+                value={settings.summaryLanguage || "English"}
+                onChange={(e) =>
+                  setSettings({ ...settings, summaryLanguage: e.target.value })
+                }
+              >
+                {LANGUAGES.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="section-divider" />
+
             <div className="section-header">
               <h2>Summary Style</h2>
               <p className="section-description">

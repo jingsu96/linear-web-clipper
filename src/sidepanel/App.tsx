@@ -12,6 +12,7 @@ import {
   generatePreview,
   estimateReadingTime,
   extractEmbedUrls,
+  stripMarkdown,
 } from "@/lib/content-extractor";
 import type { ExtractedContent } from "@/lib/content-extractor";
 import type { StorageSettings } from "@/lib/storage";
@@ -89,8 +90,17 @@ export default function App() {
   }, [content, settings]);
 
   async function initialize() {
+    // Reset all state to initial values
     setLoading(true);
     setError("");
+    setStatus("");
+    setSummary("");
+    setContent(null);
+    setMarkdown("");
+    setIssueTitle("");
+    setSummarizing(false);
+    setCreating(false);
+    setReformatting(false);
 
     try {
       const stored = await getSettings();
@@ -234,27 +244,13 @@ export default function App() {
         provider: settings.aiProvider,
         model: settings.aiModel,
         summaryStyle: settings.summaryStyle,
+        summaryLanguage: settings.summaryLanguage,
         customPrompt: settings.customSummaryPrompt,
       });
 
       if (result.success && result.data) {
         const newSummary = (result.data as { summary: string }).summary;
         setSummary(newSummary);
-
-        // Add summary to the top of the markdown
-        const summaryBlock = `## Summary\n\n${newSummary}\n\n---\n\n`;
-
-        // Check if markdown already has a summary block and replace it
-        const currentMarkdown = contentToSummarize || markdown;
-        const summaryRegex = /^## Summary\n\n[\s\S]*?\n\n---\n\n/;
-
-        if (summaryRegex.test(currentMarkdown)) {
-          // Replace existing summary
-          setMarkdown(currentMarkdown.replace(summaryRegex, summaryBlock));
-        } else {
-          // Add summary to the top
-          setMarkdown(summaryBlock + currentMarkdown);
-        }
 
         setStatus("Summary generated successfully!");
         setTimeout(() => setStatus(""), 3000);
@@ -357,7 +353,7 @@ export default function App() {
     );
   }
 
-  if (loading || reformatting) {
+  if (loading) {
     return (
       <div className="sidepanel-container">
         <div className="sidepanel-header">
@@ -366,11 +362,7 @@ export default function App() {
         <div className="sidepanel-content">
           <div className="loading-state">
             <div className="spinner" />
-            <p>
-              {reformatting
-                ? "Reformatting transcript to article format…"
-                : "Extracting page content…"}
-            </p>
+            <p>Extracting page content…</p>
           </div>
         </div>
       </div>
@@ -449,7 +441,10 @@ export default function App() {
 
             {embedUrls.length > 0 && (
               <section className="embeds-section">
-                <h3>Detected Embeds ({embedUrls.length})</h3>
+                <h3>Linear Embeds ({embedUrls.length})</h3>
+                <p className="embeds-description">
+                  These URLs will auto-embed when pasted in Linear
+                </p>
                 <div className="embeds-list">
                   {embedUrls.slice(0, 5).map((embed, i) => (
                     <div key={i} className="embed-item">
@@ -459,6 +454,14 @@ export default function App() {
                           ? embed.url.slice(0, 40) + "…"
                           : embed.url}
                       </span>
+                      {embed.note?.includes("Requires") && (
+                        <span
+                          className="embed-note"
+                          title="Requires Figma integration in Linear settings"
+                        >
+                          *
+                        </span>
+                      )}
                     </div>
                   ))}
                   {embedUrls.length > 5 && (
@@ -467,13 +470,18 @@ export default function App() {
                     </div>
                   )}
                 </div>
+                {embedUrls.some((e) => e.note?.includes("Requires")) && (
+                  <p className="embeds-footnote">
+                    * Requires Figma integration setup in Linear
+                  </p>
+                )}
               </section>
             )}
 
             {summary && (
               <section className="summary-section">
                 <h3>Summary</h3>
-                <div className="summary-content">{summary}</div>
+                <div className="summary-content">{stripMarkdown(summary)}</div>
               </section>
             )}
 
@@ -560,8 +568,10 @@ export default function App() {
               <MarkdownEditor
                 value={markdown}
                 onChange={setMarkdown}
-                maxHeight={400}
+                maxHeight={600}
                 placeholder="Extracted content will appear here…"
+                loading={reformatting}
+                loadingMessage="Reformatting transcript to article format…"
               />
             </section>
           </>

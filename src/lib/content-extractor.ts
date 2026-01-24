@@ -70,6 +70,20 @@ turndownService.addRule("images", {
   },
 });
 
+// Handle SVG elements - replace with placeholder since they can't be cloned/uploaded
+turndownService.addRule("svg", {
+  filter: (node) => node.nodeName === "svg" || node.nodeName === "SVG",
+  replacement: (_content, node) => {
+    const element = node as Element;
+    const title =
+      element.querySelector("title")?.textContent?.trim() ||
+      element.getAttribute("aria-label") ||
+      "";
+    const description = title ? ` (${title})` : "";
+    return `\n\n[SVG Graphic${description}]\n\n`;
+  },
+});
+
 // Enhanced list item handling for proper nesting
 turndownService.addRule("listItems", {
   filter: "li",
@@ -134,49 +148,42 @@ turndownService.addRule("inlineCode", {
 /**
  * Linear Auto-Embed Support
  * Linear automatically embeds URLs from these platforms when pasted on their own line.
- * We extract the canonical URL and place it on its own line for auto-embedding.
+ * Based on Linear documentation: https://linear.app/docs/editor
+ * Supported: YouTube, Descript, Loom (auto), and Figma (requires integration setup)
  */
-const EMBED_PLATFORMS = [
-  // Video platforms
-  { pattern: /youtube\.com|youtu\.be/i, name: "youtube" },
-  { pattern: /vimeo\.com/i, name: "vimeo" },
-  { pattern: /loom\.com/i, name: "loom" },
-  { pattern: /descript\.com/i, name: "descript" },
-  { pattern: /wistia\.com/i, name: "wistia" },
-  // Design tools
-  { pattern: /figma\.com/i, name: "figma" },
-  { pattern: /sketch\.com/i, name: "sketch" },
-  { pattern: /framer\.com/i, name: "framer" },
-  { pattern: /miro\.com/i, name: "miro" },
-  { pattern: /whimsical\.com/i, name: "whimsical" },
-  // Code platforms
-  { pattern: /codepen\.io/i, name: "codepen" },
-  { pattern: /codesandbox\.io/i, name: "codesandbox" },
-  { pattern: /jsfiddle\.net/i, name: "jsfiddle" },
-  { pattern: /replit\.com|repl\.it/i, name: "replit" },
-  { pattern: /stackblitz\.com/i, name: "stackblitz" },
-  { pattern: /github\.com.*\/(blob|tree)/i, name: "github" },
-  { pattern: /gist\.github\.com/i, name: "gist" },
-  // Social
-  { pattern: /twitter\.com|x\.com/i, name: "twitter" },
-  { pattern: /threads\.net/i, name: "threads" },
-  // Documents
-  { pattern: /docs\.google\.com|drive\.google\.com/i, name: "google-docs" },
-  { pattern: /notion\.so/i, name: "notion" },
-  { pattern: /airtable\.com/i, name: "airtable" },
-  // Audio
-  { pattern: /spotify\.com/i, name: "spotify" },
-  { pattern: /soundcloud\.com/i, name: "soundcloud" },
-  // Other
-  { pattern: /typeform\.com/i, name: "typeform" },
-  { pattern: /calendly\.com/i, name: "calendly" },
+const LINEAR_EMBED_PLATFORMS = [
+  { pattern: /youtube\.com|youtu\.be/i, name: "youtube", note: "Auto-embeds" },
+  { pattern: /loom\.com/i, name: "loom", note: "Auto-embeds" },
+  { pattern: /descript\.com/i, name: "descript", note: "Auto-embeds" },
+  {
+    pattern: /figma\.com/i,
+    name: "figma",
+    note: "Requires Figma integration",
+  },
 ];
 
 /**
- * Check if a URL is from an embeddable platform
+ * Extended platforms for content extraction (still useful to extract canonical URLs)
+ * These won't auto-embed in Linear but we still want to convert iframes to links
+ */
+const EXTENDED_EMBED_PLATFORMS = [
+  ...LINEAR_EMBED_PLATFORMS,
+  // Additional platforms for URL extraction (won't auto-embed in Linear)
+  { pattern: /vimeo\.com/i, name: "vimeo", note: null },
+  { pattern: /codepen\.io/i, name: "codepen", note: null },
+  { pattern: /codesandbox\.io/i, name: "codesandbox", note: null },
+  { pattern: /twitter\.com|x\.com/i, name: "twitter", note: null },
+  { pattern: /spotify\.com/i, name: "spotify", note: null },
+  { pattern: /docs\.google\.com/i, name: "google-docs", note: null },
+];
+
+/**
+ * Check if a URL is from an embeddable platform (extended list for iframe extraction)
  */
 function isEmbeddablePlatform(url: string): boolean {
-  return EMBED_PLATFORMS.some((platform) => platform.pattern.test(url));
+  return EXTENDED_EMBED_PLATFORMS.some((platform) =>
+    platform.pattern.test(url),
+  );
 }
 
 /**
@@ -491,21 +498,41 @@ function preprocessHtml(html: string): string {
  * Clean up markdown output for optimal Linear compatibility
  */
 function cleanMarkdown(markdown: string): string {
-  return (
-    markdown
-      // Normalize line endings
-      .replace(/\r\n/g, "\n")
-      // Remove excessive blank lines (more than 2)
-      .replace(/\n{3,}/g, "\n\n")
-      // Clean up spaces before punctuation
-      .replace(/ +([.,;:!?])/g, "$1")
-      // Remove trailing spaces on lines
-      .split("\n")
-      .map((line) => line.trimEnd())
-      .join("\n")
-      // Remove leading/trailing whitespace
-      .trim()
+  let cleaned = markdown
+    // Normalize line endings
+    .replace(/\r\n/g, "\n")
+    // Remove excessive blank lines (more than 2)
+    .replace(/\n{3,}/g, "\n\n")
+    // Clean up spaces before punctuation
+    .replace(/ +([.,;:!?])/g, "$1")
+    // Remove trailing spaces on lines
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    // Remove leading/trailing whitespace
+    .trim();
+
+  // Post-process: Convert markdown links to Linear-embeddable platforms into standalone URLs
+  // Linear auto-embeds URLs on their own line for YouTube, Loom, Descript, and Figma
+  const linearEmbedPattern =
+    /(youtube\.com|youtu\.be|loom\.com|descript\.com|figma\.com)/i;
+
+  // Replace markdown links [text](url) with standalone URL if it's embeddable
+  cleaned = cleaned.replace(
+    /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
+    (match, _text, url) => {
+      if (linearEmbedPattern.test(url)) {
+        // Return URL on its own line for auto-embedding
+        return `\n\n${url}\n\n`;
+      }
+      return match;
+    },
   );
+
+  // Clean up any resulting excessive blank lines again
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
+
+  return cleaned;
 }
 
 /**
@@ -518,8 +545,6 @@ export function formatAsMarkdown(
   const parts: string[] = [];
 
   if (includeMetadata) {
-    parts.push(`# ${content.title}`);
-    parts.push("");
     parts.push(`**Source:** ${content.url}`);
     parts.push(`**Clipped:** ${new Date(content.timestamp).toLocaleString()}`);
     parts.push("");
@@ -814,23 +839,37 @@ function cleanContentElement(element: HTMLElement): HTMLElement {
 }
 
 /**
+ * Strip markdown formatting from text, preserving the plain text content
+ */
+export function stripMarkdown(content: string): string {
+  return (
+    content
+      // Remove markdown formatting
+      .replace(/^#{1,6}\s+/gm, "") // headings
+      .replace(/\*\*\*([^*]+)\*\*\*/g, "$1") // bold italic
+      .replace(/\*\*([^*]+)\*\*/g, "$1") // bold
+      .replace(/\*([^*]+)\*/g, "$1") // italic
+      .replace(/_([^_]+)_/g, "$1") // italic underscore
+      .replace(/~~([^~]+)~~/g, "$1") // strikethrough
+      .replace(/`{3}[\s\S]*?`{3}/g, "") // code blocks
+      .replace(/`([^`]+)`/g, "$1") // inline code
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // links
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "") // images
+      .replace(/^[-*+]\s+/gm, "• ") // list items to bullets
+      .replace(/^\d+\.\s+/gm, "• ") // numbered lists to bullets
+      .replace(/^>\s+/gm, "") // blockquotes
+      .replace(/---+/g, "") // horizontal rules
+      .replace(/\n{3,}/g, "\n\n") // normalize multiple newlines
+      .trim()
+  );
+}
+
+/**
  * Generate a text preview of markdown content
  */
 export function generatePreview(content: string, maxLength = 200): string {
-  const cleaned = content
-    // Remove markdown formatting
-    .replace(/^#{1,6}\s+/gm, "") // headings
-    .replace(/\*\*([^*]+)\*\*/g, "$1") // bold
-    .replace(/_([^_]+)_/g, "$1") // italic
-    .replace(/~~([^~]+)~~/g, "$1") // strikethrough
-    .replace(/`{1,3}[^`]*`{1,3}/g, "") // code
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // links
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "") // images
-    .replace(/^[-*+]\s+/gm, "") // list items
-    .replace(/^\d+\.\s+/gm, "") // numbered lists
-    .replace(/^>\s+/gm, "") // blockquotes
-    .replace(/---+/g, "") // horizontal rules
-    .replace(/\n{2,}/g, " ") // multiple newlines
+  const cleaned = stripMarkdown(content)
+    .replace(/\n{2,}/g, " ") // multiple newlines to space
     .replace(/\s+/g, " ") // normalize whitespace
     .trim();
 
@@ -862,21 +901,25 @@ export function estimateReadingTime(text: string): number {
 }
 
 /**
- * Extract all embeddable URLs from markdown content
- * Useful for preview/validation
+ * Extract Linear-supported embeddable URLs from markdown content
+ * Only returns URLs that will auto-embed in Linear (YouTube, Loom, Descript, Figma)
  */
 export function extractEmbedUrls(
   markdown: string,
-): Array<{ url: string; platform: string }> {
+): Array<{ url: string; platform: string; note: string | null }> {
   const urlPattern = /https?:\/\/[^\s<>)\]]+/g;
-  const urls: Array<{ url: string; platform: string }> = [];
+  const urls: Array<{ url: string; platform: string; note: string | null }> =
+    [];
+  const seenUrls = new Set<string>();
 
   let match;
   while ((match = urlPattern.exec(markdown)) !== null) {
     const url = match[0];
-    const platform = EMBED_PLATFORMS.find((p) => p.pattern.test(url));
-    if (platform) {
-      urls.push({ url, platform: platform.name });
+    // Only include Linear-supported platforms
+    const platform = LINEAR_EMBED_PLATFORMS.find((p) => p.pattern.test(url));
+    if (platform && !seenUrls.has(url)) {
+      seenUrls.add(url);
+      urls.push({ url, platform: platform.name, note: platform.note });
     }
   }
 

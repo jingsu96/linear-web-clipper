@@ -184,7 +184,6 @@ section h3 {
     font-size: 11px;
     font-weight: 600;
     color: #6e6d7a;
-    text-transform: uppercase;
     letter-spacing: 0.06em;
 }
 
@@ -415,6 +414,12 @@ section h3 {
     margin-top: 0;
 }
 
+.embeds-description {
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: #6e6d7a;
+}
+
 .embeds-list {
     display: flex;
     flex-direction: column;
@@ -443,16 +448,30 @@ section h3 {
 }
 
 .embed-url {
+    flex: 1;
     color: #6e6d7a;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.embed-note {
+    flex-shrink: 0;
+    color: #e5484d;
+    font-weight: 600;
+}
+
 .embed-more {
     font-size: 11px;
     color: #9b9b9b;
     padding: 4px 0;
+}
+
+.embeds-footnote {
+    margin: 8px 0 0;
+    font-size: 10px;
+    color: #9b9b9b;
+    font-style: italic;
 }
 
 /* Markdown section with editor */

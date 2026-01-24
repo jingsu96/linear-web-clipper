@@ -6,6 +6,8 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void;
   maxHeight?: number;
   placeholder?: string;
+  loading?: boolean;
+  loadingMessage?: string;
 }
 
 type ViewMode = "edit" | "preview" | "split";
@@ -25,6 +27,8 @@ export default function MarkdownEditor({
   onChange,
   maxHeight = 400,
   placeholder = "Enter markdown content…",
+  loading = false,
+  loadingMessage = "Loading content…",
 }: MarkdownEditorProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("preview");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -108,29 +112,50 @@ export default function MarkdownEditor({
         className={`markdown-editor-content ${viewMode}`}
         style={{ maxHeight }}
       >
-        {(viewMode === "edit" || viewMode === "split") && (
-          <div className="editor-pane">
-            <textarea
-              ref={textareaRef}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              className="markdown-textarea"
-              spellCheck={false}
-              aria-label="Markdown editor"
-            />
+        {loading ? (
+          <div className="editor-skeleton">
+            <div className="skeleton-header">
+              <div className="skeleton-line skeleton-title" />
+              <div className="skeleton-line skeleton-subtitle" />
+            </div>
+            <div className="skeleton-body">
+              <div className="skeleton-line" />
+              <div className="skeleton-line" />
+              <div className="skeleton-line skeleton-short" />
+              <div className="skeleton-line" />
+              <div className="skeleton-line skeleton-medium" />
+              <div className="skeleton-line" />
+              <div className="skeleton-line skeleton-short" />
+            </div>
+            <p className="skeleton-message">{loadingMessage}</p>
           </div>
-        )}
-
-        {(viewMode === "preview" || viewMode === "split") && (
-          <div className="preview-pane" ref={previewRef}>
-            {value ? (
-              renderMarkdownPreview(value)
-            ) : (
-              <p className="preview-empty">{placeholder}</p>
+        ) : (
+          <>
+            {(viewMode === "edit" || viewMode === "split") && (
+              <div className="editor-pane">
+                <textarea
+                  ref={textareaRef}
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={placeholder}
+                  className="markdown-textarea"
+                  spellCheck={false}
+                  aria-label="Markdown editor"
+                />
+              </div>
             )}
-          </div>
+
+            {(viewMode === "preview" || viewMode === "split") && (
+              <div className="preview-pane" ref={previewRef}>
+                {value ? (
+                  renderMarkdownPreview(value)
+                ) : (
+                  <p className="preview-empty">{placeholder}</p>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -200,23 +225,19 @@ function markdownToHtml(markdown: string): string {
     '<img src="$2" alt="$1" loading="lazy" />',
   );
 
-  // Embeddable URLs (on their own line) - highlight them
-  const embedPatterns = [
-    /youtube\.com|youtu\.be/i,
-    /vimeo\.com/i,
-    /loom\.com/i,
-    /figma\.com/i,
-    /twitter\.com|x\.com/i,
-    /codepen\.io/i,
-    /codesandbox\.io/i,
-    /spotify\.com/i,
-    /github\.com/i,
+  // Linear-supported embeddable URLs (on their own line) - highlight them
+  // Based on Linear docs: YouTube, Loom, Descript auto-embed; Figma requires integration
+  const linearEmbedPatterns = [
+    { pattern: /youtube\.com|youtu\.be/i, name: "YouTube" },
+    { pattern: /loom\.com/i, name: "Loom" },
+    { pattern: /descript\.com/i, name: "Descript" },
+    { pattern: /figma\.com/i, name: "Figma" },
   ];
 
   html = html.replace(/^(https?:\/\/[^\s<]+)$/gm, (_match, url) => {
-    const isEmbed = embedPatterns.some((p) => p.test(url));
-    if (isEmbed) {
-      return `<div class="embed-link"><span class="embed-badge">Embed</span><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></div>`;
+    const embed = linearEmbedPatterns.find((p) => p.pattern.test(url));
+    if (embed) {
+      return `<div class="embed-link"><span class="embed-badge">${embed.name}</span><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></div>`;
     }
     return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
   });

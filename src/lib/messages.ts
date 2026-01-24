@@ -76,6 +76,7 @@ export async function summarizeContent(payload: {
   provider: AIProvider;
   model?: string;
   summaryStyle?: SummaryStyle;
+  summaryLanguage?: string;
   customPrompt?: string;
 }) {
   return sendMessage({

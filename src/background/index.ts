@@ -696,6 +696,7 @@ async function handleSummarizeContent(payload: {
   provider: AIProvider;
   model?: string;
   summaryStyle?: SummaryStyle;
+  summaryLanguage?: string;
   customPrompt?: string;
 }) {
   const {
@@ -704,6 +705,7 @@ async function handleSummarizeContent(payload: {
     provider,
     model: modelId,
     summaryStyle = "concise",
+    summaryLanguage = "English",
     customPrompt,
   } = payload;
 
@@ -719,6 +721,11 @@ async function handleSummarizeContent(payload: {
     } else {
       basePrompt = SUMMARY_STYLE_PROMPTS.concise.prompt;
     }
+
+    // Add strong language instruction to the prompt
+    // Use emphatic language to ensure the model outputs in the correct language
+    // regardless of the input content's language
+    basePrompt += `\n\nIMPORTANT: You MUST write the entire summary in ${summaryLanguage} only. Do NOT use the language of the source content - always output in ${summaryLanguage}.`;
 
     // Check if content is too large for single summarization
     // Use a larger threshold for cost optimization - summarize the most important parts

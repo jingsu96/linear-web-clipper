@@ -1,4 +1,4 @@
-# Linear Web Clipper
+# Linear Web Clipper (v2)
 
 > A Chrome extension to clip web pages and YouTube transcripts, creating Linear issues with AI-powered summarization.
 
@@ -9,7 +9,7 @@
 
 [![Watch Demo](https://img.youtube.com/vi/l8bcRzbNW6U/maxresdefault.jpg)](https://www.youtube.com/watch?v=l8bcRzbNW6U)
 
-[▶️ Watch Demo Video](https://www.youtube.com/watch?v=l8bcRzbNW6U)
+[▶️ Watch Demo Video](https://youtu.be/kPx4s87iGHU)
 
 ## Features
 

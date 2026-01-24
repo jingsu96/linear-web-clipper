@@ -11,9 +11,11 @@ import {
   formatAsMarkdown,
   generatePreview,
   estimateReadingTime,
+  extractEmbedUrls,
 } from "@/lib/content-extractor";
 import type { ExtractedContent } from "@/lib/content-extractor";
 import type { StorageSettings } from "@/lib/storage";
+import MarkdownEditor from "@/components/MarkdownEditor";
 import "./App.css";
 
 interface LinearTeam {
@@ -165,7 +167,7 @@ export default function App() {
     }
 
     setReformatting(true);
-    setStatus("Reformatting transcript to article format...");
+    setStatus("Reformatting transcript to article format…");
     setError("");
 
     try {
@@ -267,7 +269,7 @@ export default function App() {
 
     setCreating(true);
     setError("");
-    setStatus("Creating Linear issue...");
+    setStatus("Creating Linear issue…");
 
     try {
       const result = await createLinearIssue({
@@ -281,7 +283,7 @@ export default function App() {
 
       if (result.success && result.data) {
         const issue = result.data as { identifier: string; url: string };
-        setStatus(`✓ Created ${issue.identifier}`);
+        setStatus(`Created ${issue.identifier}`);
 
         // Open the issue in a new tab
         setTimeout(() => {
@@ -309,6 +311,7 @@ export default function App() {
 
   const readingTime = content ? estimateReadingTime(content.textContent) : 0;
   const preview = markdown ? generatePreview(markdown, 150) : "";
+  const embedUrls = markdown ? extractEmbedUrls(markdown) : [];
 
   if (!isConfigured) {
     return (
@@ -344,8 +347,8 @@ export default function App() {
             <div className="spinner" />
             <p>
               {reformatting
-                ? "Reformatting transcript to article format..."
-                : "Extracting page content..."}
+                ? "Reformatting transcript to article format…"
+                : "Extracting page content…"}
             </p>
           </div>
         </div>
@@ -415,13 +418,36 @@ export default function App() {
               <h2>{content.title}</h2>
               <div className="content-meta">
                 <span>{readingTime} min read</span>
-                <span>•</span>
+                <span>·</span>
                 <a href={content.url} target="_blank" rel="noreferrer">
                   Open page
                 </a>
               </div>
               {preview && <p className="preview-text">{preview}</p>}
             </section>
+
+            {embedUrls.length > 0 && (
+              <section className="embeds-section">
+                <h3>Detected Embeds ({embedUrls.length})</h3>
+                <div className="embeds-list">
+                  {embedUrls.slice(0, 5).map((embed, i) => (
+                    <div key={i} className="embed-item">
+                      <span className="embed-platform">{embed.platform}</span>
+                      <span className="embed-url" title={embed.url}>
+                        {embed.url.length > 40
+                          ? embed.url.slice(0, 40) + "…"
+                          : embed.url}
+                      </span>
+                    </div>
+                  ))}
+                  {embedUrls.length > 5 && (
+                    <div className="embed-more">
+                      +{embedUrls.length - 5} more
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
 
             {summary && (
               <section className="summary-section">
@@ -440,7 +466,7 @@ export default function App() {
                     onClick={() => handleSummarize()}
                     disabled={summarizing}
                   >
-                    {summarizing ? "Summarizing..." : "Generate Summary"}
+                    {summarizing ? "Summarizing…" : "Generate Summary"}
                   </button>
                 </section>
               )}
@@ -504,17 +530,18 @@ export default function App() {
                 onClick={handleCreateIssue}
                 disabled={creating || !selectedTeam || !issueTitle.trim()}
               >
-                {creating ? "Creating..." : "Create Issue"}
+                {creating ? "Creating…" : "Create Issue"}
               </button>
             </section>
 
             <section className="markdown-section">
-              <details>
-                <summary>
-                  Preview Markdown ({markdown.length} characters)
-                </summary>
-                <pre className="markdown-preview">{markdown}</pre>
-              </details>
+              <h3>Content Preview</h3>
+              <MarkdownEditor
+                value={markdown}
+                onChange={setMarkdown}
+                maxHeight={400}
+                placeholder="Extracted content will appear here…"
+              />
             </section>
           </>
         )}

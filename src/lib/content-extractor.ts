@@ -1,411 +1,884 @@
-import TurndownService from 'turndown'
-import { gfm } from 'turndown-plugin-gfm'
+import TurndownService from "turndown";
+import { gfm } from "turndown-plugin-gfm";
 
 export interface ExtractedContent {
-  title: string
-  url: string
-  htmlContent: string
-  textContent: string
-  metaDescription: string
-  timestamp: string
-  error?: string
+  title: string;
+  url: string;
+  htmlContent: string;
+  textContent: string;
+  metaDescription: string;
+  timestamp: string;
+  error?: string;
 }
 
-// Configure Turndown for markdown conversion
+// Configure Turndown for markdown conversion optimized for Linear
 const turndownService = new TurndownService({
-  headingStyle: 'atx',
-  codeBlockStyle: 'fenced',
-  bulletListMarker: '-',
-  emDelimiter: '_',
-  // Keep images as markdown links
-  linkStyle: 'inlined',
-  linkReferenceStyle: 'full',
-})
+  headingStyle: "atx",
+  codeBlockStyle: "fenced",
+  bulletListMarker: "-",
+  emDelimiter: "_",
+  linkStyle: "inlined",
+  linkReferenceStyle: "full",
+});
 
-// Use GitHub Flavored Markdown plugin for tables and better formatting
-turndownService.use(gfm)
+// Use GitHub Flavored Markdown plugin for tables and strikethrough
+turndownService.use(gfm);
 
-// Add custom rules for better markdown conversion
-turndownService.addRule('strikethrough', {
-  filter: ['del', 's'],
+// Strikethrough support
+turndownService.addRule("strikethrough", {
+  filter: ["del", "s"],
   replacement: (content) => `~~${content}~~`,
-})
+});
 
-turndownService.addRule('highlight', {
-  filter: ['mark'],
+// Highlight/mark support
+turndownService.addRule("highlight", {
+  filter: ["mark"],
   replacement: (content) => `==${content}==`,
-})
+});
 
-// Enhanced image handling with alt text and captions
-turndownService.addRule('images', {
-  filter: 'img',
+// Enhanced image handling with alt text and figure captions
+turndownService.addRule("images", {
+  filter: "img",
   replacement: (_content, node) => {
-    const alt = (node as HTMLImageElement).alt || 'image'
-    const src = (node as HTMLImageElement).src || ''
-    const title = (node as HTMLImageElement).title
+    const img = node as HTMLImageElement;
+    const alt = img.alt || "image";
+    const src = img.src || img.getAttribute("data-src") || "";
 
-    if (!src) return ''
+    if (!src || src.startsWith("data:")) return "";
 
-    // Check if there's a caption
-    const figure = node.parentElement
-    let caption = ''
-    if (figure && figure.tagName === 'FIGURE') {
-      const figcaption = figure.querySelector('figcaption')
+    // Skip tracking pixels and tiny images
+    const width = img.width || parseInt(img.getAttribute("width") || "0", 10);
+    const height =
+      img.height || parseInt(img.getAttribute("height") || "0", 10);
+    if ((width > 0 && width < 10) || (height > 0 && height < 10)) return "";
+
+    const title = img.title;
+    const figure = node.parentElement;
+
+    let caption = "";
+    if (figure && figure.tagName === "FIGURE") {
+      const figcaption = figure.querySelector("figcaption");
       if (figcaption) {
-        caption = figcaption.textContent?.trim() || ''
+        caption = figcaption.textContent?.trim() || "";
       }
     }
 
-    const titlePart = title ? ` "${title}"` : ''
-    const imageMarkdown = `![${alt}](${src}${titlePart})`
+    const titlePart = title ? ` "${title}"` : "";
+    const imageMarkdown = `![${alt}](${src}${titlePart})`;
 
-    return caption ? `${imageMarkdown}\n*${caption}*` : imageMarkdown
+    return caption ? `${imageMarkdown}\n*${caption}*` : imageMarkdown;
   },
-})
+});
 
-// Enhanced list handling to preserve nested lists
-turndownService.addRule('listItems', {
-  filter: 'li',
+// Enhanced list item handling for proper nesting
+turndownService.addRule("listItems", {
+  filter: "li",
   replacement: (content, node, options) => {
     content = content
-      .replace(/^\n+/, '') // remove leading newlines
-      .replace(/\n+$/, '\n') // replace trailing newlines with just one
-      .replace(/\n/gm, '\n    ') // indent
+      .replace(/^\n+/, "")
+      .replace(/\n+$/, "\n")
+      .replace(/\n/gm, "\n    ");
 
-    let prefix = options.bulletListMarker + ' '
-    const parent = node.parentNode as HTMLElement
+    let prefix = options.bulletListMarker + " ";
+    const parent = node.parentNode as HTMLElement;
 
-    if (parent && parent.nodeName === 'OL') {
-      const start = parent.getAttribute('start')
-      const index = Array.prototype.indexOf.call(parent.children, node)
-      prefix = (start ? Number(start) + index : index + 1) + '. '
+    if (parent && parent.nodeName === "OL") {
+      const start = parent.getAttribute("start");
+      const index = Array.prototype.indexOf.call(parent.children, node);
+      prefix = (start ? Number(start) + index : index + 1) + ". ";
     }
 
-    return prefix + content + (node.nextSibling && !/\n$/.test(content) ? '\n' : '')
+    return (
+      prefix + content + (node.nextSibling && !/\n$/.test(content) ? "\n" : "")
+    );
   },
-})
+});
 
-// Enhanced code block handling with language detection
-turndownService.addRule('fencedCodeBlock', {
+// Code blocks with language detection
+turndownService.addRule("fencedCodeBlock", {
   filter: (node, options) => {
     return !!(
-      options.codeBlockStyle === 'fenced' &&
-      node.nodeName === 'PRE' &&
+      options.codeBlockStyle === "fenced" &&
+      node.nodeName === "PRE" &&
       node.firstChild &&
-      node.firstChild.nodeName === 'CODE'
-    )
-  },
-  replacement: (_content, node, _options) => {
-    const code = node.firstChild as HTMLElement
-    const className = code.getAttribute('class') || ''
-    const language = extractLanguageFromClass(className)
-    const codeContent = code.textContent || ''
-
-    return '\n\n```' + language + '\n' + codeContent + '\n```\n\n'
-  },
-})
-
-// Inline code - convert to code blocks instead of inline backticks
-turndownService.addRule('inlineCode', {
-  filter: (node) => {
-    const isCodeChild = node.parentNode?.nodeName === 'PRE'
-    return !!(node.nodeName === 'CODE' && !isCodeChild)
+      node.firstChild.nodeName === "CODE"
+    );
   },
   replacement: (_content, node) => {
-    const text = (node as HTMLElement).textContent || ''
-    const className = (node as HTMLElement).getAttribute('class') || ''
-    const language = extractLanguageFromClass(className)
+    const code = node.firstChild as HTMLElement;
+    const className = code.getAttribute("class") || "";
+    const language = extractLanguageFromClass(className);
+    const codeContent = code.textContent || "";
 
-    // Use code block for all code elements
-    return '\n\n```' + language + '\n' + text + '\n```\n\n'
+    return (
+      "\n\n```" + language + "\n" + codeContent.replace(/\n$/, "") + "\n```\n\n"
+    );
   },
-})
+});
 
-// Enhanced embed handling for Linear-compatible embeds
-turndownService.addRule('embeds', {
+// Inline code - keep as inline backticks (not code blocks)
+turndownService.addRule("inlineCode", {
   filter: (node) => {
-    return !!(node.nodeName === 'IFRAME' || node.nodeName === 'EMBED')
+    return node.nodeName === "CODE" && node.parentNode?.nodeName !== "PRE";
   },
   replacement: (_content, node) => {
-    const src = (node as HTMLElement).getAttribute('src') || ''
-
-    if (!src) return ''
-
-    // Check if it's a supported embed platform
-    const embedUrl = extractEmbedUrl(src)
-
-    if (embedUrl) {
-      return '\n\n' + embedUrl + '\n\n'
+    const text = (node as HTMLElement).textContent || "";
+    // Use double backticks if content contains backticks
+    if (text.includes("`")) {
+      return "`` " + text + " ``";
     }
-
-    // Fallback: just link to the iframe source
-    return `\n\n[Embedded content](${src})\n\n`
+    return "`" + text + "`";
   },
-})
-
-// Remove unwanted elements (but not iframes, we handle them above)
-turndownService.remove(['script', 'style', 'noscript'])
+});
 
 /**
- * Extract and normalize embed URLs for Linear compatibility
- * Linear supports embeds from: YouTube, Vimeo, Figma, Loom, Twitter, and more
+ * Linear Auto-Embed Support
+ * Linear automatically embeds URLs from these platforms when pasted on their own line.
+ * We extract the canonical URL and place it on its own line for auto-embedding.
  */
-function extractEmbedUrl(iframeSrc: string): string | null {
+const EMBED_PLATFORMS = [
+  // Video platforms
+  { pattern: /youtube\.com|youtu\.be/i, name: "youtube" },
+  { pattern: /vimeo\.com/i, name: "vimeo" },
+  { pattern: /loom\.com/i, name: "loom" },
+  { pattern: /descript\.com/i, name: "descript" },
+  { pattern: /wistia\.com/i, name: "wistia" },
+  // Design tools
+  { pattern: /figma\.com/i, name: "figma" },
+  { pattern: /sketch\.com/i, name: "sketch" },
+  { pattern: /framer\.com/i, name: "framer" },
+  { pattern: /miro\.com/i, name: "miro" },
+  { pattern: /whimsical\.com/i, name: "whimsical" },
+  // Code platforms
+  { pattern: /codepen\.io/i, name: "codepen" },
+  { pattern: /codesandbox\.io/i, name: "codesandbox" },
+  { pattern: /jsfiddle\.net/i, name: "jsfiddle" },
+  { pattern: /replit\.com|repl\.it/i, name: "replit" },
+  { pattern: /stackblitz\.com/i, name: "stackblitz" },
+  { pattern: /github\.com.*\/(blob|tree)/i, name: "github" },
+  { pattern: /gist\.github\.com/i, name: "gist" },
+  // Social
+  { pattern: /twitter\.com|x\.com/i, name: "twitter" },
+  { pattern: /threads\.net/i, name: "threads" },
+  // Documents
+  { pattern: /docs\.google\.com|drive\.google\.com/i, name: "google-docs" },
+  { pattern: /notion\.so/i, name: "notion" },
+  { pattern: /airtable\.com/i, name: "airtable" },
+  // Audio
+  { pattern: /spotify\.com/i, name: "spotify" },
+  { pattern: /soundcloud\.com/i, name: "soundcloud" },
+  // Other
+  { pattern: /typeform\.com/i, name: "typeform" },
+  { pattern: /calendly\.com/i, name: "calendly" },
+];
+
+/**
+ * Check if a URL is from an embeddable platform
+ */
+function isEmbeddablePlatform(url: string): boolean {
+  return EMBED_PLATFORMS.some((platform) => platform.pattern.test(url));
+}
+
+/**
+ * Extract canonical URL from iframe embed src
+ */
+function extractCanonicalUrl(iframeSrc: string): string | null {
   try {
-    const url = new URL(iframeSrc)
+    const url = new URL(iframeSrc);
 
-    // YouTube embeds
-    if (url.hostname.includes('youtube.com') || url.hostname.includes('youtu.be')) {
-      // Extract video ID from various YouTube URL formats
-      let videoId = ''
+    // YouTube embeds -> watch URL
+    if (
+      url.hostname.includes("youtube.com") &&
+      url.pathname.includes("/embed/")
+    ) {
+      const videoId = url.pathname.split("/embed/")[1]?.split(/[?/]/)[0];
+      if (videoId) return `https://www.youtube.com/watch?v=${videoId}`;
+    }
 
-      if (url.hostname.includes('youtube.com')) {
-        if (url.pathname.includes('/embed/')) {
-          videoId = url.pathname.split('/embed/')[1]?.split('?')[0] || ''
-        } else if (url.searchParams.has('v')) {
-          videoId = url.searchParams.get('v') || ''
-        }
-      } else if (url.hostname.includes('youtu.be')) {
-        videoId = url.pathname.slice(1).split('?')[0]
-      }
-
-      if (videoId) {
-        return `https://www.youtube.com/watch?v=${videoId}`
-      }
+    // YouTube nocookie embeds
+    if (
+      url.hostname.includes("youtube-nocookie.com") &&
+      url.pathname.includes("/embed/")
+    ) {
+      const videoId = url.pathname.split("/embed/")[1]?.split(/[?/]/)[0];
+      if (videoId) return `https://www.youtube.com/watch?v=${videoId}`;
     }
 
     // Vimeo embeds
-    if (url.hostname.includes('vimeo.com')) {
-      const videoId = url.pathname.split('/').pop()
-      if (videoId) {
-        return `https://vimeo.com/${videoId}`
-      }
-    }
-
-    // Figma embeds
-    if (url.hostname.includes('figma.com')) {
-      // Return the full Figma URL
-      return iframeSrc.split('?')[0]
+    if (url.hostname.includes("player.vimeo.com")) {
+      const videoId = url.pathname.split("/video/")[1]?.split(/[?/]/)[0];
+      if (videoId) return `https://vimeo.com/${videoId}`;
     }
 
     // Loom embeds
-    if (url.hostname.includes('loom.com')) {
-      const pathParts = url.pathname.split('/')
-      const videoId = pathParts[pathParts.length - 1]
-      if (videoId) {
-        return `https://www.loom.com/share/${videoId}`
-      }
+    if (url.hostname.includes("loom.com") && url.pathname.includes("/embed/")) {
+      const videoId = url.pathname.split("/embed/")[1]?.split(/[?/]/)[0];
+      if (videoId) return `https://www.loom.com/share/${videoId}`;
     }
 
-    // Twitter/X embeds
-    if (url.hostname.includes('twitter.com') || url.hostname.includes('x.com')) {
-      return iframeSrc
+    // Figma embeds
+    if (url.hostname.includes("figma.com") && url.pathname.includes("/embed")) {
+      const fileUrl = url.searchParams.get("url");
+      if (fileUrl) return decodeURIComponent(fileUrl);
+      // Try to extract from the path
+      const figmaMatch = iframeSrc.match(/figma\.com\/file\/([^/?]+)/);
+      if (figmaMatch) return `https://www.figma.com/file/${figmaMatch[1]}`;
     }
 
     // CodePen embeds
-    if (url.hostname.includes('codepen.io')) {
-      return iframeSrc.replace('/embed/', '/pen/')
-    }
-
-    // JSFiddle embeds
-    if (url.hostname.includes('jsfiddle.net')) {
-      return iframeSrc.split('/embedded/')[0] || iframeSrc
+    if (url.hostname.includes("codepen.io")) {
+      return iframeSrc.replace("/embed/", "/pen/").split("?")[0];
     }
 
     // CodeSandbox embeds
-    if (url.hostname.includes('codesandbox.io')) {
-      const sandboxId = url.pathname.split('/').find(part => part && part !== 'embed' && part !== 's')
-      if (sandboxId) {
-        return `https://codesandbox.io/s/${sandboxId}`
-      }
+    if (url.hostname.includes("codesandbox.io")) {
+      const sandboxId = url.pathname
+        .replace("/embed/", "/s/")
+        .replace("/embed", "");
+      return `https://codesandbox.io${sandboxId}`.split("?")[0];
     }
 
-    // Google Drive embeds (docs, sheets, slides)
-    if (url.hostname.includes('docs.google.com') || url.hostname.includes('drive.google.com')) {
-      return iframeSrc.split('?')[0]
+    // Twitter embeds
+    if (
+      url.hostname.includes("platform.twitter.com") ||
+      url.hostname.includes("twitter.com")
+    ) {
+      const tweetUrl = url.searchParams.get("url");
+      if (tweetUrl) return decodeURIComponent(tweetUrl);
     }
 
     // Spotify embeds
-    if (url.hostname.includes('spotify.com')) {
-      return iframeSrc.replace('/embed/', '/')
+    if (
+      url.hostname.includes("open.spotify.com") &&
+      url.pathname.includes("/embed/")
+    ) {
+      return iframeSrc.replace("/embed/", "/").split("?")[0];
     }
 
-    // SoundCloud embeds
-    if (url.hostname.includes('soundcloud.com')) {
-      const trackUrl = url.searchParams.get('url')
-      if (trackUrl) {
-        return trackUrl
-      }
+    // Google Docs/Sheets/Slides embeds
+    if (url.hostname.includes("docs.google.com")) {
+      return iframeSrc.split("/pub")[0].split("/edit")[0].split("/preview")[0];
     }
 
-    // GitHub Gists
-    if (url.hostname.includes('gist.github.com')) {
-      return iframeSrc.split('.js')[0] || iframeSrc
+    // For other recognized platforms, return cleaned URL
+    if (isEmbeddablePlatform(iframeSrc)) {
+      return iframeSrc.split("?")[0];
     }
 
-    // For other embeds, return null to fall back to link
-    return null
-  } catch (e) {
-    console.error('Failed to parse embed URL:', e)
-    return null
+    return null;
+  } catch {
+    return null;
   }
 }
 
+// Handle iframes and embeds - extract URL for Linear auto-embedding
+turndownService.addRule("embeds", {
+  filter: (node) => node.nodeName === "IFRAME" || node.nodeName === "EMBED",
+  replacement: (_content, node) => {
+    const src = (node as HTMLElement).getAttribute("src") || "";
+    if (!src) return "";
+
+    const canonicalUrl = extractCanonicalUrl(src);
+
+    if (canonicalUrl) {
+      // Return URL on its own line for Linear auto-embedding
+      return "\n\n" + canonicalUrl + "\n\n";
+    }
+
+    // For unknown embeds, create a link
+    return `\n\n[Embedded content](${src})\n\n`;
+  },
+});
+
+// Handle standalone links that should be embeddable
+turndownService.addRule("embeddableLinks", {
+  filter: (node) => {
+    if (node.nodeName !== "A") return false;
+    const href = (node as HTMLAnchorElement).href;
+    // Check if link is to an embeddable platform and is roughly the only content
+    const textContent = node.textContent?.trim() || "";
+    const isStandaloneish =
+      textContent === href ||
+      textContent.length < 100 ||
+      node.querySelector("img") !== null;
+    return isEmbeddablePlatform(href) && isStandaloneish;
+  },
+  replacement: (_content, node) => {
+    const href = (node as HTMLAnchorElement).href;
+    // Put embeddable links on their own line for auto-embedding
+    return "\n\n" + href + "\n\n";
+  },
+});
+
+// Remove unwanted elements
+turndownService.remove(["script", "style", "noscript", "canvas", "template"]);
+
 /**
- * Extract programming language from class name
+ * Extract programming language from code element class name
  */
 function extractLanguageFromClass(className: string): string {
-  // Common patterns:
-  // - language-javascript, language-js
-  // - lang-python, lang-py
-  // - javascript, python (direct class name)
-  // - highlight-source-ruby
-  // - brush: js (SyntaxHighlighter)
+  if (!className) return "";
 
-  if (!className) return ''
+  // Common patterns: language-js, lang-python, highlight-source-ruby, brush: js
+  const patterns = [
+    /language-(\w+)/,
+    /lang-(\w+)/,
+    /highlight-source-(\w+)/,
+    /brush:\s*(\w+)/,
+    /hljs\s+(\w+)/,
+    /prism-(\w+)/,
+  ];
 
-  // Try language- prefix
-  const langMatch = className.match(/language-(\w+)/)
-  if (langMatch) return langMatch[1]
+  for (const pattern of patterns) {
+    const match = className.match(pattern);
+    if (match) return normalizeLanguage(match[1]);
+  }
 
-  // Try lang- prefix
-  const langMatch2 = className.match(/lang-(\w+)/)
-  if (langMatch2) return langMatch2[1]
+  // Check if class name itself is a known language
+  const knownLanguages = new Set([
+    "javascript",
+    "js",
+    "typescript",
+    "ts",
+    "python",
+    "py",
+    "java",
+    "cpp",
+    "c",
+    "csharp",
+    "cs",
+    "ruby",
+    "rb",
+    "go",
+    "golang",
+    "rust",
+    "php",
+    "swift",
+    "kotlin",
+    "scala",
+    "bash",
+    "shell",
+    "sh",
+    "zsh",
+    "sql",
+    "html",
+    "css",
+    "scss",
+    "sass",
+    "less",
+    "json",
+    "xml",
+    "yaml",
+    "yml",
+    "markdown",
+    "md",
+    "graphql",
+    "jsx",
+    "tsx",
+    "vue",
+    "svelte",
+    "dockerfile",
+    "makefile",
+    "nginx",
+    "apache",
+    "toml",
+    "ini",
+    "diff",
+    "git",
+    "http",
+    "plaintext",
+    "text",
+  ]);
 
-  // Try highlight-source- prefix (GitHub style)
-  const sourceMatch = className.match(/highlight-source-(\w+)/)
-  if (sourceMatch) return sourceMatch[1]
-
-  // Try brush: prefix (SyntaxHighlighter)
-  const brushMatch = className.match(/brush:\s*(\w+)/)
-  if (brushMatch) return brushMatch[1]
-
-  // Check if class name itself is a language
-  const commonLanguages = [
-    'javascript', 'js', 'typescript', 'ts', 'python', 'py', 'java',
-    'cpp', 'c', 'csharp', 'ruby', 'go', 'rust', 'php', 'swift',
-    'kotlin', 'scala', 'bash', 'shell', 'sh', 'sql', 'html', 'css',
-    'json', 'xml', 'yaml', 'markdown', 'md',
-  ]
-
-  const classes = className.toLowerCase().split(/\s+/)
-  for (const cls of classes) {
-    if (commonLanguages.includes(cls)) {
-      return cls
+  for (const cls of className.toLowerCase().split(/\s+/)) {
+    if (knownLanguages.has(cls)) {
+      return normalizeLanguage(cls);
     }
   }
 
-  return ''
+  return "";
 }
 
 /**
- * Convert HTML content to clean markdown
+ * Normalize language aliases to standard names
+ */
+function normalizeLanguage(lang: string): string {
+  const aliases: Record<string, string> = {
+    js: "javascript",
+    ts: "typescript",
+    py: "python",
+    rb: "ruby",
+    cs: "csharp",
+    golang: "go",
+    yml: "yaml",
+    md: "markdown",
+    sh: "bash",
+    zsh: "bash",
+  };
+  return aliases[lang.toLowerCase()] || lang.toLowerCase();
+}
+
+/**
+ * Convert HTML content to clean markdown optimized for Linear
  */
 export function htmlToMarkdown(html: string): string {
   try {
-    const markdown = turndownService.turndown(html)
-    return cleanMarkdown(markdown)
+    // Pre-process HTML to handle edge cases
+    const processedHtml = preprocessHtml(html);
+    const markdown = turndownService.turndown(processedHtml);
+    return cleanMarkdown(markdown);
   } catch (error) {
-    console.error('HTML to Markdown conversion failed:', error)
-    return html
+    console.error("HTML to Markdown conversion failed:", error);
+    return html;
   }
 }
 
 /**
- * Clean up markdown output
+ * Pre-process HTML before conversion
+ */
+function preprocessHtml(html: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  // Remove hidden elements
+  doc
+    .querySelectorAll(
+      '[hidden], [style*="display: none"], [style*="display:none"]',
+    )
+    .forEach((el) => el.remove());
+
+  // Remove empty paragraphs and divs
+  doc.querySelectorAll("p, div, span").forEach((el) => {
+    if (
+      !el.textContent?.trim() &&
+      !el.querySelector("img, video, iframe, embed")
+    ) {
+      el.remove();
+    }
+  });
+
+  // Unwrap unnecessary wrapper divs that only contain a single block element
+  doc.querySelectorAll("div").forEach((div) => {
+    const children = Array.from(div.children);
+    if (
+      children.length === 1 &&
+      ["P", "DIV", "ARTICLE", "SECTION"].includes(children[0].tagName)
+    ) {
+      div.replaceWith(...Array.from(div.childNodes));
+    }
+  });
+
+  // Convert data-src to src for lazy-loaded images
+  doc.querySelectorAll("img[data-src]").forEach((img) => {
+    const dataSrc = img.getAttribute("data-src");
+    if (dataSrc && !img.getAttribute("src")) {
+      img.setAttribute("src", dataSrc);
+    }
+  });
+
+  // Handle picture elements - extract best image source
+  doc.querySelectorAll("picture").forEach((picture) => {
+    const img = picture.querySelector("img");
+    if (img) {
+      picture.replaceWith(img);
+    }
+  });
+
+  return doc.body.innerHTML;
+}
+
+/**
+ * Clean up markdown output for optimal Linear compatibility
  */
 function cleanMarkdown(markdown: string): string {
-  return markdown
-    // Remove excessive blank lines
-    .replace(/\n{3,}/g, '\n\n')
-    // Clean up list formatting
-    .replace(/^[\s]*[-*]\s+$/gm, '')
-    // Trim each line
-    .split('\n')
-    .map(line => line.trimEnd())
-    .join('\n')
-    .trim()
+  return (
+    markdown
+      // Normalize line endings
+      .replace(/\r\n/g, "\n")
+      // Remove excessive blank lines (more than 2)
+      .replace(/\n{3,}/g, "\n\n")
+      // Clean up spaces before punctuation
+      .replace(/ +([.,;:!?])/g, "$1")
+      // Remove trailing spaces on lines
+      .split("\n")
+      .map((line) => line.trimEnd())
+      .join("\n")
+      // Remove leading/trailing whitespace
+      .trim()
+  );
 }
 
 /**
- * Format extracted content as markdown with metadata
+ * Format extracted content as markdown with optional metadata header
  */
-export function formatAsMarkdown(content: ExtractedContent, includeMetadata = true): string {
-  const parts: string[] = []
+export function formatAsMarkdown(
+  content: ExtractedContent,
+  includeMetadata = true,
+): string {
+  const parts: string[] = [];
 
   if (includeMetadata) {
-    parts.push(`# ${content.title}`)
-    parts.push('')
-    parts.push(`**Source:** ${content.url}`)
-    parts.push(`**Clipped:** ${new Date(content.timestamp).toLocaleString()}`)
-    parts.push('')
+    parts.push(`# ${content.title}`);
+    parts.push("");
+    parts.push(`**Source:** ${content.url}`);
+    parts.push(`**Clipped:** ${new Date(content.timestamp).toLocaleString()}`);
+    parts.push("");
 
     if (content.metaDescription) {
-      parts.push(`> ${content.metaDescription}`)
-      parts.push('')
+      parts.push(`> ${content.metaDescription}`);
+      parts.push("");
     }
 
-    parts.push('---')
-    parts.push('')
+    parts.push("---");
+    parts.push("");
   }
 
-  // Convert HTML to markdown
-  const markdownContent = htmlToMarkdown(content.htmlContent)
-  parts.push(markdownContent)
+  const markdownContent = htmlToMarkdown(content.htmlContent);
+  parts.push(markdownContent);
 
-  return parts.join('\n')
+  return parts.join("\n");
 }
 
 /**
- * Extract main content from HTML using simple heuristics
+ * Selectors for main content detection, ordered by specificity
+ */
+const MAIN_CONTENT_SELECTORS = [
+  // Semantic HTML5
+  'article[role="main"]',
+  "main article",
+  "article",
+  "main",
+  '[role="main"]',
+  // Common content class patterns
+  ".post-content",
+  ".article-content",
+  ".article-body",
+  ".entry-content",
+  ".content-body",
+  ".post-body",
+  ".story-body",
+  ".blog-post",
+  ".blog-content",
+  // CMS-specific
+  ".markdown-body", // GitHub
+  ".notion-page-content", // Notion
+  ".medium-content", // Medium-style
+  ".wp-content", // WordPress
+  ".prose", // Tailwind prose
+  // Generic fallbacks
+  "#content",
+  "#main-content",
+  "#article",
+  ".content",
+];
+
+/**
+ * Selectors for elements to remove from content
+ */
+const REMOVE_SELECTORS = [
+  // Navigation & structure
+  "nav",
+  "header",
+  "footer",
+  "aside",
+  '[role="navigation"]',
+  '[role="banner"]',
+  '[role="contentinfo"]',
+  // Ads & promotions
+  ".ad",
+  ".ads",
+  ".advertisement",
+  ".sponsored",
+  '[class*="advert"]',
+  '[id*="advert"]',
+  ".promo",
+  ".promotion",
+  ".banner",
+  // Social & sharing
+  ".social-share",
+  ".share-buttons",
+  ".social-links",
+  ".follow-us",
+  ".newsletter-signup",
+  // Comments
+  ".comments",
+  ".comment-section",
+  "#comments",
+  "#disqus_thread",
+  '[class*="comment"]',
+  '[id*="comment"]',
+  // Related content
+  ".related-posts",
+  ".related-articles",
+  ".related-content",
+  ".related",
+  ".recommended",
+  ".recommendations",
+  ".more-stories",
+  ".more-articles",
+  ".read-next",
+  ".read-more",
+  ".you-might-like",
+  ".also-like",
+  ".popular-posts",
+  ".trending",
+  ".latest-posts",
+  ".recent-posts",
+  '[class*="related"]',
+  '[class*="recommend"]',
+  // Popups & overlays
+  ".modal",
+  ".popup",
+  ".overlay",
+  ".tooltip",
+  // Print & accessibility helpers
+  ".screen-reader-text",
+  ".visually-hidden",
+  ".sr-only",
+  // Metadata & tags
+  ".tags",
+  ".categories",
+  ".meta",
+  ".byline",
+  ".author-bio",
+  ".author-box",
+  // Navigation within article
+  ".breadcrumb",
+  ".breadcrumbs",
+  ".pagination",
+  ".table-of-contents",
+  ".toc",
+];
+
+/**
+ * Extract main content from HTML document
+ * Uses heuristics to identify the primary content area
  */
 export function extractMainContent(html: string): string {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
 
-  // Try to find main content container
-  const mainSelectors = [
-    'article',
-    'main',
-    '[role="main"]',
-    '.post-content',
-    '.article-content',
-    '.entry-content',
-    '#content',
-  ]
-
-  for (const selector of mainSelectors) {
-    const element = doc.querySelector(selector)
-    if (element && element.textContent && element.textContent.trim().length > 100) {
-      return element.innerHTML
+  // First, try to find main content using semantic selectors
+  for (const selector of MAIN_CONTENT_SELECTORS) {
+    const element = doc.querySelector(selector);
+    if (element && isSubstantialContent(element)) {
+      return cleanContentElement(element.cloneNode(true) as HTMLElement)
+        .innerHTML;
     }
   }
 
-  // Fallback to body
-  return doc.body.innerHTML
+  // Fallback: find the element with the most paragraph text content
+  const candidates = doc.querySelectorAll("div, section, article");
+  let bestCandidate: Element | null = null;
+  let bestScore = 0;
+
+  candidates.forEach((candidate) => {
+    const score = scoreContentElement(candidate);
+    if (score > bestScore) {
+      bestScore = score;
+      bestCandidate = candidate;
+    }
+  });
+
+  if (bestCandidate !== null && bestScore > 100) {
+    return cleanContentElement(
+      (bestCandidate as Element).cloneNode(true) as HTMLElement,
+    ).innerHTML;
+  }
+
+  // Last resort: use body
+  return cleanContentElement(doc.body.cloneNode(true) as HTMLElement).innerHTML;
 }
 
 /**
- * Generate a preview of the content (first N characters)
+ * Check if element contains substantial content
+ */
+function isSubstantialContent(element: Element): boolean {
+  const text = element.textContent || "";
+  const wordCount = text.trim().split(/\s+/).length;
+  const paragraphs = element.querySelectorAll("p").length;
+
+  return wordCount > 50 || paragraphs > 1;
+}
+
+/**
+ * Score an element based on content quality indicators
+ */
+function scoreContentElement(element: Element): number {
+  let score = 0;
+
+  // Count paragraphs with substantial text
+  element.querySelectorAll("p").forEach((p) => {
+    const text = p.textContent?.trim() || "";
+    if (text.length > 25) score += text.length / 10;
+  });
+
+  // Boost for headings
+  score += element.querySelectorAll("h1, h2, h3").length * 10;
+
+  // Boost for code blocks
+  score += element.querySelectorAll("pre, code").length * 5;
+
+  // Boost for images with alt text
+  element.querySelectorAll("img[alt]").forEach((img) => {
+    if ((img as HTMLImageElement).alt.length > 5) score += 5;
+  });
+
+  // Penalty for too many links (likely navigation)
+  const links = element.querySelectorAll("a").length;
+  const text = element.textContent?.length || 1;
+  const linkDensity = links / (text / 100);
+  if (linkDensity > 0.5) score *= 0.5;
+
+  // Penalty for short content
+  if (text < 200) score *= 0.5;
+
+  return score;
+}
+
+/**
+ * Clean content element by removing unwanted child elements
+ */
+function cleanContentElement(element: HTMLElement): HTMLElement {
+  // Remove unwanted elements
+  REMOVE_SELECTORS.forEach((selector) => {
+    element.querySelectorAll(selector).forEach((el) => el.remove());
+  });
+
+  // Remove elements with certain keywords in class/id
+  const keywordPatterns = [
+    /sidebar/i,
+    /widget/i,
+    /popup/i,
+    /modal/i,
+    /overlay/i,
+    /newsletter/i,
+    /subscribe/i,
+    /signup/i,
+    /sign-up/i,
+  ];
+
+  element.querySelectorAll("*").forEach((el) => {
+    const className = el.className?.toString() || "";
+    const id = el.id || "";
+    for (const pattern of keywordPatterns) {
+      if (pattern.test(className) || pattern.test(id)) {
+        el.remove();
+        break;
+      }
+    }
+  });
+
+  // Remove empty elements
+  element.querySelectorAll("div, span, p").forEach((el) => {
+    if (
+      !el.textContent?.trim() &&
+      !el.querySelector("img, video, iframe, embed, svg")
+    ) {
+      el.remove();
+    }
+  });
+
+  // Remove link lists (lists where items are primarily links, often "related posts")
+  element.querySelectorAll("ul, ol").forEach((list) => {
+    const items = list.querySelectorAll("li");
+    if (items.length === 0) return;
+
+    let linkOnlyItems = 0;
+    items.forEach((item) => {
+      const links = item.querySelectorAll("a");
+      const headings = item.querySelectorAll("h1, h2, h3, h4, h5, h6");
+      const itemText = item.textContent?.trim() || "";
+      const linkText = Array.from(links)
+        .map((a) => a.textContent?.trim() || "")
+        .join("");
+
+      // Check if item is mostly a link (with optional heading inside)
+      if (
+        links.length > 0 &&
+        (headings.length > 0 ||
+          linkText.length > itemText.length * 0.7 ||
+          itemText.length < 100)
+      ) {
+        linkOnlyItems++;
+      }
+    });
+
+    // If most items are link-only, remove the whole list
+    if (linkOnlyItems > items.length * 0.6) {
+      list.remove();
+    }
+  });
+
+  return element;
+}
+
+/**
+ * Generate a text preview of markdown content
  */
 export function generatePreview(content: string, maxLength = 200): string {
   const cleaned = content
-    .replace(/[#*>`\-_]/g, '') // Remove markdown formatting
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .trim()
+    // Remove markdown formatting
+    .replace(/^#{1,6}\s+/gm, "") // headings
+    .replace(/\*\*([^*]+)\*\*/g, "$1") // bold
+    .replace(/_([^_]+)_/g, "$1") // italic
+    .replace(/~~([^~]+)~~/g, "$1") // strikethrough
+    .replace(/`{1,3}[^`]*`{1,3}/g, "") // code
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // links
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "") // images
+    .replace(/^[-*+]\s+/gm, "") // list items
+    .replace(/^\d+\.\s+/gm, "") // numbered lists
+    .replace(/^>\s+/gm, "") // blockquotes
+    .replace(/---+/g, "") // horizontal rules
+    .replace(/\n{2,}/g, " ") // multiple newlines
+    .replace(/\s+/g, " ") // normalize whitespace
+    .trim();
 
   if (cleaned.length <= maxLength) {
-    return cleaned
+    return cleaned;
   }
 
-  return cleaned.slice(0, maxLength).trim() + '…'
+  // Cut at word boundary
+  const truncated = cleaned.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return (
+    (lastSpace > maxLength * 0.8
+      ? truncated.slice(0, lastSpace)
+      : truncated
+    ).trim() + "…"
+  );
 }
 
 /**
  * Estimate reading time in minutes
  */
 export function estimateReadingTime(text: string): number {
-  const wordsPerMinute = 200
-  const wordCount = text.trim().split(/\s+/).length
-  return Math.ceil(wordCount / wordsPerMinute)
+  const wordsPerMinute = 200;
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0).length;
+  return Math.max(1, Math.ceil(words / wordsPerMinute));
+}
+
+/**
+ * Extract all embeddable URLs from markdown content
+ * Useful for preview/validation
+ */
+export function extractEmbedUrls(
+  markdown: string,
+): Array<{ url: string; platform: string }> {
+  const urlPattern = /https?:\/\/[^\s<>)\]]+/g;
+  const urls: Array<{ url: string; platform: string }> = [];
+
+  let match;
+  while ((match = urlPattern.exec(markdown)) !== null) {
+    const url = match[0];
+    const platform = EMBED_PLATFORMS.find((p) => p.pattern.test(url));
+    if (platform) {
+      urls.push({ url, platform: platform.name });
+    }
+  }
+
+  return urls;
 }

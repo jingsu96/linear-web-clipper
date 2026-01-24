@@ -1,0 +1,338 @@
+.markdown-editor {
+  background: #ffffff;
+  border: 1px solid #e6e6e6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Toolbar */
+.markdown-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: #fafafa;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.view-mode-tabs {
+  display: flex;
+  gap: 2px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.view-mode-tab {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6e6d7a;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-family: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.view-mode-tab:hover:not(.active) {
+  color: #1a1523;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.view-mode-tab.active {
+  color: #1a1523;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.view-mode-tab:focus-visible {
+  outline: 2px solid #5e6ad2;
+  outline-offset: 1px;
+}
+
+.char-count {
+  font-size: 11px;
+  color: #9b9b9b;
+  font-variant-numeric: tabular-nums;
+  padding-right: 4px;
+}
+
+/* Content area */
+.markdown-editor-content {
+  display: flex;
+  overflow: hidden;
+}
+
+.markdown-editor-content.edit .editor-pane {
+  width: 100%;
+}
+
+.markdown-editor-content.preview .preview-pane {
+  width: 100%;
+}
+
+.markdown-editor-content.split .editor-pane,
+.markdown-editor-content.split .preview-pane {
+  width: 50%;
+}
+
+.markdown-editor-content.split .editor-pane {
+  border-right: 1px solid #e6e6e6;
+}
+
+/* Editor pane */
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+.markdown-textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 200px;
+  padding: 12px;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #1a1523;
+  background: #ffffff;
+  border: none;
+  resize: none;
+  overflow-y: auto;
+}
+
+.markdown-textarea:focus {
+  outline: none;
+}
+
+.markdown-textarea::placeholder {
+  color: #b4b4b4;
+}
+
+/* Preview pane */
+.preview-pane {
+  padding: 12px;
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+.preview-empty {
+  margin: 0;
+  color: #b4b4b4;
+  font-style: italic;
+}
+
+/* Rendered markdown styles */
+.markdown-rendered {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1a1523;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdown-rendered h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.markdown-rendered h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 20px 0 10px;
+}
+
+.markdown-rendered h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 16px 0 8px;
+}
+
+.markdown-rendered p {
+  margin: 0 0 12px;
+}
+
+.markdown-rendered p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-rendered a {
+  color: #5e6ad2;
+  text-decoration: none;
+}
+
+.markdown-rendered a:hover {
+  text-decoration: underline;
+}
+
+.markdown-rendered strong {
+  font-weight: 600;
+}
+
+.markdown-rendered em {
+  font-style: italic;
+}
+
+.markdown-rendered del {
+  text-decoration: line-through;
+  color: #6e6d7a;
+}
+
+.markdown-rendered code {
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Courier New", monospace;
+  font-size: 0.9em;
+  padding: 2px 5px;
+  background: #f4f4f5;
+  border-radius: 3px;
+  color: #e53e3e;
+}
+
+.markdown-rendered pre {
+  margin: 12px 0;
+  padding: 12px;
+  background: #1a1523;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.markdown-rendered pre code {
+  padding: 0;
+  background: transparent;
+  color: #e4e4e7;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.markdown-rendered blockquote {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #5e6ad2;
+  background: #fafafa;
+  color: #6e6d7a;
+}
+
+.markdown-rendered blockquote p {
+  margin: 0;
+}
+
+.markdown-rendered ul,
+.markdown-rendered ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.markdown-rendered li {
+  margin: 4px 0;
+}
+
+.markdown-rendered hr {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid #e6e6e6;
+}
+
+.markdown-rendered img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+/* Embed link styling */
+.embed-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+  border: 1px solid #d4daff;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.embed-badge {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #5e6ad2;
+  background: #ffffff;
+  border: 1px solid #d4daff;
+  border-radius: 3px;
+}
+
+.embed-link a {
+  color: #5e6ad2;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Keyboard hint */
+.markdown-editor-hint {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: #9b9b9b;
+  background: #fafafa;
+  border-top: 1px solid #e6e6e6;
+  text-align: right;
+}
+
+.markdown-editor-hint kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-family: inherit;
+  font-size: 10px;
+  color: #6e6d7a;
+  background: #ffffff;
+  border: 1px solid #d1d1d1;
+  border-radius: 3px;
+  box-shadow: 0 1px 0 #d1d1d1;
+}
+
+/* Scrollbar styling */
+.markdown-textarea::-webkit-scrollbar,
+.preview-pane::-webkit-scrollbar {
+  width: 6px;
+}
+
+.markdown-textarea::-webkit-scrollbar-track,
+.preview-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.markdown-textarea::-webkit-scrollbar-thumb,
+.preview-pane::-webkit-scrollbar-thumb {
+  background: #d1d1d1;
+  border-radius: 3px;
+}
+
+.markdown-textarea::-webkit-scrollbar-thumb:hover,
+.preview-pane::-webkit-scrollbar-thumb:hover {
+  background: #b4b4b4;
+}
+
+/* Focus states */
+.markdown-editor:focus-within {
+  border-color: #5e6ad2;
+  box-shadow: 0 0 0 2px rgba(94, 106, 210, 0.1);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .view-mode-tab,
+  .markdown-editor {
+    transition: none;
+  }
+}

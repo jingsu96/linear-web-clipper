@@ -404,59 +404,66 @@ section h3 {
     cursor: not-allowed;
 }
 
-/* Updated markdown section to Linear's subtle expandable style */
-.markdown-section {
+/* Embeds section showing detected embed URLs */
+.embeds-section {
     background: #fafafa;
     border: 1px solid #e6e6e6;
+    padding: 12px;
+}
+
+.embeds-section h3 {
+    margin-top: 0;
+}
+
+.embeds-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.embed-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: #ffffff;
+    border: 1px solid #e6e6e6;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.embed-platform {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    font-weight: 600;
+    text-transform: capitalize;
+    color: #5e6ad2;
+    background: #f0f4ff;
+    border-radius: 3px;
+}
+
+.embed-url {
+    color: #6e6d7a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.embed-more {
+    font-size: 11px;
+    color: #9b9b9b;
+    padding: 4px 0;
+}
+
+/* Markdown section with editor */
+.markdown-section {
+    background: transparent;
+    border: none;
     padding: 0;
 }
 
-.markdown-section details {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    overflow: hidden;
-}
-
-.markdown-section summary {
-    padding: 12px 16px;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 12px;
-    color: #6e6d7a;
-    user-select: none;
-    transition: background 0.12s ease;
-    letter-spacing: -0.01em;
-}
-
-.markdown-section summary:hover {
-    background: #f3f3f3;
-}
-
-.markdown-section summary:focus-visible {
-    outline: 2px solid #5e6ad2;
-    outline-offset: -2px;
-}
-
-.markdown-preview {
-    margin: 0;
-    padding: 16px;
-    font-size: 12px;
-    line-height: 1.6;
-    color: #1a1523;
-    background: #ffffff;
-    border-top: 1px solid #e6e6e6;
-    overflow-x: auto;
-    overflow-y: auto;
-    max-height: 400px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    max-width: 100%;
-    font-family:
-        "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Courier New",
-        monospace;
+.markdown-section h3 {
+    margin-bottom: 8px;
 }
 
 /* Focus visible styles for accessibility */

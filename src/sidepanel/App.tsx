@@ -175,6 +175,7 @@ export default function App() {
         content: transcriptMarkdown,
         apiKey: settings.aiApiKey,
         provider: settings.aiProvider,
+        model: settings.aiModel,
       });
 
       if (result.success && result.data) {
@@ -216,9 +217,9 @@ export default function App() {
     }
 
     // Use provided content or fall back to markdown state
-    const content = contentToSummarize || markdown;
+    const contentForSummary = contentToSummarize || markdown;
 
-    if (!content) {
+    if (!contentForSummary) {
       setError("No content to summarize");
       return;
     }
@@ -228,13 +229,33 @@ export default function App() {
 
     try {
       const result = await summarizeContent({
-        content: content,
+        content: contentForSummary,
         apiKey: settings.aiApiKey,
         provider: settings.aiProvider,
+        model: settings.aiModel,
+        summaryStyle: settings.summaryStyle,
+        customPrompt: settings.customSummaryPrompt,
       });
 
       if (result.success && result.data) {
-        setSummary((result.data as { summary: string }).summary);
+        const newSummary = (result.data as { summary: string }).summary;
+        setSummary(newSummary);
+
+        // Add summary to the top of the markdown
+        const summaryBlock = `## Summary\n\n${newSummary}\n\n---\n\n`;
+
+        // Check if markdown already has a summary block and replace it
+        const currentMarkdown = contentToSummarize || markdown;
+        const summaryRegex = /^## Summary\n\n[\s\S]*?\n\n---\n\n/;
+
+        if (summaryRegex.test(currentMarkdown)) {
+          // Replace existing summary
+          setMarkdown(currentMarkdown.replace(summaryRegex, summaryBlock));
+        } else {
+          // Add summary to the top
+          setMarkdown(summaryBlock + currentMarkdown);
+        }
+
         setStatus("Summary generated successfully!");
         setTimeout(() => setStatus(""), 3000);
       } else {

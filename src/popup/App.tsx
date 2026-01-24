@@ -1,18 +1,29 @@
 import { useState, useEffect } from "react";
-import { getSettings, saveSettings, hasLinearApiKey } from "@/lib/storage";
-import type { StorageSettings } from "@/lib/storage";
+import {
+  getSettings,
+  saveSettings,
+  hasLinearApiKey,
+  getDefaultModel,
+  AI_MODELS,
+  SUMMARY_STYLE_PROMPTS,
+} from "@/lib/storage";
+import type { StorageSettings, AIProvider, SummaryStyle } from "@/lib/storage";
 import "./App.css";
 
-type SettingsTab = "linear" | "ai" | "preferences";
+type SettingsTab = "linear" | "ai" | "summary" | "preferences";
 
-const AI_PROVIDERS = [
+const AI_PROVIDERS: {
+  value: AIProvider;
+  label: string;
+  placeholder: string;
+}[] = [
   { value: "none", label: "None", placeholder: "" },
   { value: "openai", label: "OpenAI", placeholder: "sk-..." },
   { value: "anthropic", label: "Anthropic", placeholder: "sk-ant-..." },
   { value: "gemini", label: "Google Gemini", placeholder: "AIzaSy..." },
   { value: "deepseek", label: "DeepSeek", placeholder: "sk-..." },
   { value: "grok", label: "Grok (xAI)", placeholder: "xai-..." },
-] as const;
+];
 
 export default function App() {
   const [settings, setSettings] = useState<StorageSettings>({});
@@ -80,7 +91,8 @@ export default function App() {
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "linear", label: "Linear" },
     { id: "ai", label: "AI" },
-    { id: "preferences", label: "Preferences" },
+    { id: "summary", label: "Summary" },
+    { id: "preferences", label: "Prefs" },
   ];
 
   if (isConfigured) {
@@ -242,14 +254,15 @@ export default function App() {
               <select
                 id="aiProvider"
                 value={settings.aiProvider || "none"}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const newProvider = e.target.value as AIProvider;
                   setSettings({
                     ...settings,
-                    aiProvider: e.target.value as StorageSettings["aiProvider"],
-                    aiApiKey:
-                      e.target.value === "none" ? "" : settings.aiApiKey,
-                  })
-                }
+                    aiProvider: newProvider,
+                    aiApiKey: newProvider === "none" ? "" : settings.aiApiKey,
+                    aiModel: getDefaultModel(newProvider),
+                  });
+                }}
               >
                 {AI_PROVIDERS.map((provider) => (
                   <option key={provider.value} value={provider.value}>
@@ -260,122 +273,230 @@ export default function App() {
             </div>
 
             {settings.aiProvider && settings.aiProvider !== "none" && (
-              <div className="form-group">
-                <label htmlFor="aiApiKey">
-                  {getProviderLabel(settings.aiProvider)} API Key
-                </label>
-                <div className="input-with-toggle">
-                  <input
-                    id="aiApiKey"
-                    type={showApiKeys.ai ? "text" : "password"}
-                    placeholder={getProviderPlaceholder(settings.aiProvider)}
-                    value={settings.aiApiKey || ""}
-                    onChange={(e) =>
-                      setSettings({ ...settings, aiApiKey: e.target.value })
+              <>
+                <div className="form-group">
+                  <label htmlFor="aiModel">Model</label>
+                  <select
+                    id="aiModel"
+                    value={
+                      settings.aiModel || getDefaultModel(settings.aiProvider)
                     }
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
-                  <button
-                    type="button"
-                    className="toggle-visibility"
-                    onClick={() => toggleApiKeyVisibility("ai")}
-                    aria-label={
-                      showApiKeys.ai ? "Hide API key" : "Show API key"
+                    onChange={(e) =>
+                      setSettings({ ...settings, aiModel: e.target.value })
                     }
                   >
-                    {showApiKeys.ai ? (
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                  </button>
+                    {AI_MODELS[settings.aiProvider].map((model) => (
+                      <option key={model.value} value={model.value}>
+                        {model.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                <div className="form-group">
+                  <label htmlFor="aiApiKey">
+                    {getProviderLabel(settings.aiProvider)} API Key
+                  </label>
+                  <div className="input-with-toggle">
+                    <input
+                      id="aiApiKey"
+                      type={showApiKeys.ai ? "text" : "password"}
+                      placeholder={getProviderPlaceholder(settings.aiProvider)}
+                      value={settings.aiApiKey || ""}
+                      onChange={(e) =>
+                        setSettings({ ...settings, aiApiKey: e.target.value })
+                      }
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <button
+                      type="button"
+                      className="toggle-visibility"
+                      onClick={() => toggleApiKeyVisibility("ai")}
+                      aria-label={
+                        showApiKeys.ai ? "Hide API key" : "Show API key"
+                      }
+                    >
+                      {showApiKeys.ai ? (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <small>
+                    {settings.aiProvider === "openai" && (
+                      <>
+                        Get your key from{" "}
+                        <a
+                          href="https://platform.openai.com/api-keys"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          OpenAI Dashboard
+                        </a>
+                      </>
+                    )}
+                    {settings.aiProvider === "anthropic" && (
+                      <>
+                        Get your key from{" "}
+                        <a
+                          href="https://console.anthropic.com/settings/keys"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Anthropic Console
+                        </a>
+                      </>
+                    )}
+                    {settings.aiProvider === "gemini" && (
+                      <>
+                        Get your key from{" "}
+                        <a
+                          href="https://aistudio.google.com/apikey"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Google AI Studio
+                        </a>
+                      </>
+                    )}
+                    {settings.aiProvider === "deepseek" && (
+                      <>
+                        Get your key from{" "}
+                        <a
+                          href="https://platform.deepseek.com/api_keys"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          DeepSeek Platform
+                        </a>
+                      </>
+                    )}
+                    {settings.aiProvider === "grok" && (
+                      <>
+                        Get your key from{" "}
+                        <a
+                          href="https://console.x.ai"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          xAI Console
+                        </a>
+                      </>
+                    )}
+                  </small>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div
+            className="tab-panel"
+            role="tabpanel"
+            data-active={activeTab === "summary"}
+          >
+            <div className="section-header">
+              <h2>Summary Style</h2>
+              <p className="section-description">
+                Choose how summaries are formatted.
+              </p>
+            </div>
+
+            <div className="form-group">
+              <div className="style-options">
+                {(
+                  Object.keys(SUMMARY_STYLE_PROMPTS) as Exclude<
+                    SummaryStyle,
+                    "custom"
+                  >[]
+                ).map((style) => (
+                  <label
+                    key={style}
+                    className={`style-option ${settings.summaryStyle === style ? "selected" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="summaryStyle"
+                      value={style}
+                      checked={settings.summaryStyle === style}
+                      onChange={() =>
+                        setSettings({ ...settings, summaryStyle: style })
+                      }
+                    />
+                    <span className="style-content">
+                      <span className="style-label">
+                        {SUMMARY_STYLE_PROMPTS[style].label}
+                      </span>
+                      <span className="style-description">
+                        {SUMMARY_STYLE_PROMPTS[style].description}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+                <label
+                  className={`style-option ${settings.summaryStyle === "custom" ? "selected" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="summaryStyle"
+                    value="custom"
+                    checked={settings.summaryStyle === "custom"}
+                    onChange={() =>
+                      setSettings({ ...settings, summaryStyle: "custom" })
+                    }
+                  />
+                  <span className="style-content">
+                    <span className="style-label">Custom</span>
+                    <span className="style-description">
+                      Write your own prompt
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {settings.summaryStyle === "custom" && (
+              <div className="form-group">
+                <label htmlFor="customPrompt">Custom Prompt</label>
+                <textarea
+                  id="customPrompt"
+                  value={settings.customSummaryPrompt || ""}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      customSummaryPrompt: e.target.value,
+                    })
+                  }
+                  placeholder="Write your summary instructions here…"
+                  rows={4}
+                />
                 <small>
-                  {settings.aiProvider === "openai" && (
-                    <>
-                      Get your key from{" "}
-                      <a
-                        href="https://platform.openai.com/api-keys"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        OpenAI Dashboard
-                      </a>
-                    </>
-                  )}
-                  {settings.aiProvider === "anthropic" && (
-                    <>
-                      Get your key from{" "}
-                      <a
-                        href="https://console.anthropic.com/settings/keys"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Anthropic Console
-                      </a>
-                    </>
-                  )}
-                  {settings.aiProvider === "gemini" && (
-                    <>
-                      Get your key from{" "}
-                      <a
-                        href="https://aistudio.google.com/apikey"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Google AI Studio
-                      </a>
-                    </>
-                  )}
-                  {settings.aiProvider === "deepseek" && (
-                    <>
-                      Get your key from{" "}
-                      <a
-                        href="https://platform.deepseek.com/api_keys"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        DeepSeek Platform
-                      </a>
-                    </>
-                  )}
-                  {settings.aiProvider === "grok" && (
-                    <>
-                      Get your key from{" "}
-                      <a
-                        href="https://console.x.ai"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        xAI Console
-                      </a>
-                    </>
-                  )}
+                  The content to summarize will be appended after your prompt.
                 </small>
               </div>
             )}

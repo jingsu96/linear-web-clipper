@@ -2,6 +2,10 @@ import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createDeepSeek } from "@ai-sdk/deepseek";
+import { createXai } from "@ai-sdk/xai";
+import type { AIProvider, SummaryStyle } from "@/lib/storage";
+import { SUMMARY_STYLE_PROMPTS, getDefaultModel } from "@/lib/storage";
 
 // Listen for messages from content scripts and sidepanel
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -584,47 +588,48 @@ async function addCommentToIssue(
   }
 }
 
+// Helper function to create AI model based on provider
+// Returns any to handle SDK version differences (LanguageModelV2 vs V3)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createAIModel(
+  provider: AIProvider,
+  apiKey: string,
+  modelId?: string,
+): any {
+  const modelName = modelId || getDefaultModel(provider);
+
+  switch (provider) {
+    case "openai":
+      return createOpenAI({ apiKey })(modelName);
+    case "anthropic":
+      return createAnthropic({
+        apiKey,
+        headers: {
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+      })(modelName);
+    case "gemini":
+      return createGoogleGenerativeAI({ apiKey })(modelName);
+    case "deepseek":
+      return createDeepSeek({ apiKey })(modelName);
+    case "grok":
+      return createXai({ apiKey })(modelName);
+    default:
+      throw new Error("Unsupported AI provider");
+  }
+}
+
 // Handle transcript reformatting (converts transcript to article format)
 async function handleReformatTranscript(payload: {
   content: string;
   apiKey: string;
-  provider: "openai" | "anthropic" | "gemini" | "deepseek" | "grok";
+  provider: AIProvider;
+  model?: string;
 }) {
-  const { content, apiKey, provider } = payload;
+  const { content, apiKey, provider, model: modelId } = payload;
 
   try {
-    let model;
-
-    switch (provider) {
-      case "openai":
-        const openai = createOpenAI({ apiKey });
-        model = openai("gpt-4o-mini");
-        break;
-      case "anthropic":
-        const anthropic = createAnthropic({ apiKey });
-        model = anthropic("claude-3-5-haiku-20241022");
-        break;
-      case "gemini":
-        const google = createGoogleGenerativeAI({ apiKey });
-        model = google("gemini-2.0-flash");
-        break;
-      case "deepseek":
-        const deepseek = createOpenAI({
-          apiKey,
-          baseURL: "https://api.deepseek.com/v1",
-        });
-        model = deepseek("deepseek-chat");
-        break;
-      case "grok":
-        const grok = createOpenAI({
-          apiKey,
-          baseURL: "https://api.x.ai/v1",
-        });
-        model = grok("grok-2-latest");
-        break;
-      default:
-        throw new Error("Unsupported AI provider");
-    }
+    const model = createAIModel(provider, apiKey, modelId);
 
     const MAX_CHARS = 30000;
 
@@ -688,52 +693,42 @@ ${content}`,
 async function handleSummarizeContent(payload: {
   content: string;
   apiKey: string;
-  provider: "openai" | "anthropic" | "gemini" | "deepseek" | "grok";
+  provider: AIProvider;
+  model?: string;
+  summaryStyle?: SummaryStyle;
+  customPrompt?: string;
 }) {
-  const { content, apiKey, provider } = payload;
+  const {
+    content,
+    apiKey,
+    provider,
+    model: modelId,
+    summaryStyle = "concise",
+    customPrompt,
+  } = payload;
 
   try {
-    let model;
+    const model = createAIModel(provider, apiKey, modelId);
 
-    switch (provider) {
-      case "openai":
-        const openai = createOpenAI({ apiKey });
-        model = openai("gpt-4o-mini");
-        break;
-      case "anthropic":
-        const anthropic = createAnthropic({ apiKey });
-        model = anthropic("claude-3-5-haiku-20241022");
-        break;
-      case "gemini":
-        const google = createGoogleGenerativeAI({ apiKey });
-        model = google("gemini-2.0-flash");
-        break;
-      case "deepseek":
-        const deepseek = createOpenAI({
-          apiKey,
-          baseURL: "https://api.deepseek.com/v1",
-        });
-        model = deepseek("deepseek-chat");
-        break;
-      case "grok":
-        const grok = createOpenAI({
-          apiKey,
-          baseURL: "https://api.x.ai/v1",
-        });
-        model = grok("grok-2-latest");
-        break;
-      default:
-        throw new Error("Unsupported AI provider");
+    // Get the appropriate prompt based on summary style
+    let basePrompt: string;
+    if (summaryStyle === "custom" && customPrompt) {
+      basePrompt = customPrompt;
+    } else if (summaryStyle !== "custom") {
+      basePrompt = SUMMARY_STYLE_PROMPTS[summaryStyle].prompt;
+    } else {
+      basePrompt = SUMMARY_STYLE_PROMPTS.concise.prompt;
     }
 
     // Check if content is too large for single summarization
-    const MAX_CHARS = 6000;
+    // Use a larger threshold for cost optimization - summarize the most important parts
+    const MAX_CHARS = 8000;
 
     if (content.length <= MAX_CHARS) {
       // Direct summarization for small content
       const { text } = await generateText({
         model,
-        prompt: `Please summarize the following content concisely. Focus on key points and main ideas:\n\n${content}`,
+        prompt: `${basePrompt}\n\n${content}`,
       });
 
       return {
@@ -741,25 +736,19 @@ async function handleSummarizeContent(payload: {
         summary: text,
       };
     } else {
-      // Hierarchical summarization for large content
+      // For large content, extract key sections and summarize
+      // This approach saves tokens by focusing on important parts
       const sections = splitContentBySections(content);
 
-      // Summarize each section
-      const sectionSummaries = await Promise.all(
-        sections.map(async (section) => {
-          const { text } = await generateText({
-            model,
-            prompt: `Summarize this section concisely:\n\n${section.slice(0, MAX_CHARS)}`,
-          });
-          return text;
-        }),
-      );
+      // Limit to first few sections to save tokens
+      const importantSections = sections.slice(0, 5);
+      const truncatedContent = importantSections
+        .map((s) => s.slice(0, 1500))
+        .join("\n\n---\n\n");
 
-      // Combine section summaries into final summary
-      const combinedSummaries = sectionSummaries.join("\n\n");
       const { text } = await generateText({
         model,
-        prompt: `Create a comprehensive summary from these section summaries:\n\n${combinedSummaries}`,
+        prompt: `${basePrompt}\n\nNote: This is a longer document. Focus on the most important points from the following excerpts:\n\n${truncatedContent}`,
       });
 
       return {

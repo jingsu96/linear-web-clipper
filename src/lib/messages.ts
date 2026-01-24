@@ -1,3 +1,5 @@
+import type { AIProvider, SummaryStyle } from "./storage";
+
 /**
  * Message types for communication between different parts of the extension
  */
@@ -71,7 +73,10 @@ export async function createLinearIssue(payload: {
 export async function summarizeContent(payload: {
   content: string;
   apiKey: string;
-  provider: "openai" | "anthropic" | "gemini" | "deepseek" | "grok";
+  provider: AIProvider;
+  model?: string;
+  summaryStyle?: SummaryStyle;
+  customPrompt?: string;
 }) {
   return sendMessage({
     type: "SUMMARIZE_CONTENT",
@@ -94,7 +99,8 @@ export async function getLinearData() {
 export async function reformatTranscript(payload: {
   content: string;
   apiKey: string;
-  provider: "openai" | "anthropic" | "gemini" | "deepseek" | "grok";
+  provider: AIProvider;
+  model?: string;
 }) {
   return sendMessage({
     type: "REFORMAT_TRANSCRIPT",

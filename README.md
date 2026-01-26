@@ -47,7 +47,7 @@ A Chrome extension that clips web pages and YouTube transcripts to create Linear
 
 ### From Chrome Web Store
 
-Coming soon...
+[Install from Chrome Web Store](https://chromewebstore.google.com/detail/linear-web-clipper/ihlljgnlhkdcbdbedhkggjhkdgackphj)
 
 ### From Source
 

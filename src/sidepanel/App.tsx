@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getSettings, hasLinearApiKey } from "@/lib/storage";
+import { getSettings, hasLinearApiKey, hasAnyAIConfigured, getEnabledConfigs } from "@/lib/storage";
 import {
   extractContent,
   createLinearIssue,
@@ -67,9 +67,7 @@ export default function App() {
 
       if (
         isYouTubeTranscript &&
-        settings.aiProvider &&
-        settings.aiProvider !== "none" &&
-        settings.aiApiKey
+        hasAnyAIConfigured(settings.aiProviderConfigs)
       ) {
         // Automatically reformat YouTube transcripts to article format
         handleReformatTranscript(md);
@@ -80,8 +78,7 @@ export default function App() {
         // Auto-summarize if enabled (for non-YouTube content)
         if (
           settings.autoSummarize &&
-          settings.aiProvider &&
-          settings.aiProvider !== "none"
+          hasAnyAIConfigured(settings.aiProviderConfigs)
         ) {
           handleSummarize(md);
         }
@@ -165,11 +162,8 @@ export default function App() {
   }
 
   async function handleReformatTranscript(transcriptMarkdown: string) {
-    if (
-      !settings.aiProvider ||
-      settings.aiProvider === "none" ||
-      !settings.aiApiKey
-    ) {
+    const enabledConfigs = getEnabledConfigs(settings.aiProviderConfigs);
+    if (enabledConfigs.length === 0) {
       // If AI is not configured, just use the raw transcript
       setMarkdown(transcriptMarkdown);
       setIssueTitle(content?.title || "");
@@ -183,9 +177,7 @@ export default function App() {
     try {
       const result = await reformatTranscript({
         content: transcriptMarkdown,
-        apiKey: settings.aiApiKey,
-        provider: settings.aiProvider,
-        model: settings.aiModel,
+        providerConfigs: enabledConfigs,
       });
 
       if (result.success && result.data) {
@@ -217,11 +209,8 @@ export default function App() {
   }
 
   async function handleSummarize(contentToSummarize?: string) {
-    if (
-      !settings.aiProvider ||
-      settings.aiProvider === "none" ||
-      !settings.aiApiKey
-    ) {
+    const enabledConfigs = getEnabledConfigs(settings.aiProviderConfigs);
+    if (enabledConfigs.length === 0) {
       setError("AI provider not configured. Please configure in settings.");
       return;
     }
@@ -240,9 +229,7 @@ export default function App() {
     try {
       const result = await summarizeContent({
         content: contentForSummary,
-        apiKey: settings.aiApiKey,
-        provider: settings.aiProvider,
-        model: settings.aiModel,
+        providerConfigs: enabledConfigs,
         summaryStyle: settings.summaryStyle,
         summaryLanguage: settings.summaryLanguage,
         customPrompt: settings.customSummaryPrompt,
@@ -485,8 +472,7 @@ export default function App() {
               </section>
             )}
 
-            {settings.aiProvider &&
-              settings.aiProvider !== "none" &&
+            {hasAnyAIConfigured(settings.aiProviderConfigs) &&
               !summary && (
                 <section className="actions-section">
                   <button

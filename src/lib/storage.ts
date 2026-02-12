@@ -8,7 +8,12 @@ export type AIProvider =
   | "gemini"
   | "deepseek"
   | "grok"
+  | "groq"
+  | "mistral"
+  | "openrouter"
   | "none";
+
+export type ActiveAIProvider = Exclude<AIProvider, "none">;
 
 export type SummaryStyle =
   | "concise"
@@ -17,11 +22,17 @@ export type SummaryStyle =
   | "inspired"
   | "custom";
 
+export interface AIProviderConfig {
+  id: string;
+  provider: ActiveAIProvider;
+  apiKey: string;
+  model: string;
+  customModel?: string; // openrouter only
+  enabled: boolean;
+}
+
 export interface StorageSettings {
   linearApiKey?: string;
-  aiProvider?: AIProvider;
-  aiApiKey?: string;
-  aiModel?: string;
   defaultTeamId?: string;
   defaultProjectId?: string;
   includeMetadata?: boolean;
@@ -29,7 +40,70 @@ export interface StorageSettings {
   summaryStyle?: SummaryStyle;
   summaryLanguage?: string;
   customSummaryPrompt?: string;
+  aiProviderConfigs?: AIProviderConfig[];
+  // Legacy fields — kept for migration only
+  aiProvider?: AIProvider;
+  aiApiKey?: string;
+  aiModel?: string;
+  customAiModel?: string;
 }
+
+/**
+ * Metadata for each AI provider (label, placeholder, help link)
+ */
+export const AI_PROVIDER_META: Record<
+  ActiveAIProvider,
+  { label: string; placeholder: string; helpUrl: string; helpLabel: string }
+> = {
+  openai: {
+    label: "OpenAI",
+    placeholder: "sk-...",
+    helpUrl: "https://platform.openai.com/api-keys",
+    helpLabel: "OpenAI Dashboard",
+  },
+  anthropic: {
+    label: "Anthropic",
+    placeholder: "sk-ant-...",
+    helpUrl: "https://console.anthropic.com/settings/keys",
+    helpLabel: "Anthropic Console",
+  },
+  gemini: {
+    label: "Google Gemini",
+    placeholder: "AIzaSy...",
+    helpUrl: "https://aistudio.google.com/apikey",
+    helpLabel: "Google AI Studio",
+  },
+  deepseek: {
+    label: "DeepSeek",
+    placeholder: "sk-...",
+    helpUrl: "https://platform.deepseek.com/api_keys",
+    helpLabel: "DeepSeek Platform",
+  },
+  grok: {
+    label: "Grok (xAI)",
+    placeholder: "xai-...",
+    helpUrl: "https://console.x.ai",
+    helpLabel: "xAI Console",
+  },
+  groq: {
+    label: "Groq",
+    placeholder: "gsk_...",
+    helpUrl: "https://console.groq.com/keys",
+    helpLabel: "Groq Console",
+  },
+  mistral: {
+    label: "Mistral AI",
+    placeholder: "...",
+    helpUrl: "https://console.mistral.ai/api-keys",
+    helpLabel: "Mistral Console",
+  },
+  openrouter: {
+    label: "OpenRouter",
+    placeholder: "sk-or-...",
+    helpUrl: "https://openrouter.ai/keys",
+    helpLabel: "OpenRouter Dashboard",
+  },
+};
 
 /**
  * Available models per provider
@@ -71,6 +145,21 @@ export const AI_MODELS: Record<
     { value: "grok-4.1-thinking", label: "Grok 4.1 Thinking" },
     { value: "grok-4.1-fast", label: "Grok 4.1 Fast" },
     { value: "grok-4", label: "Grok 4" },
+  ],
+  groq: [
+    { value: "llama-3.3-70b-versatile", label: "Llama 3.3 70B Versatile" },
+    { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant (Fast)" },
+    { value: "gemma2-9b-it", label: "Gemma 2 9B" },
+  ],
+  mistral: [
+    { value: "mistral-large-latest", label: "Mistral Large (Powerful)" },
+    { value: "mistral-small-latest", label: "Mistral Small (Fast)" },
+    { value: "pixtral-large-latest", label: "Pixtral Large (Multimodal)" },
+  ],
+  openrouter: [
+    { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B Instruct" },
+    { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+    { value: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
   ],
 };
 
@@ -117,14 +206,41 @@ export function getDefaultModel(provider: AIProvider): string {
 }
 
 /**
+ * Get the effective model ID for a provider config
+ */
+export function getEffectiveModelForConfig(config: AIProviderConfig): string {
+  if (config.provider === "openrouter" && config.customModel?.trim()) {
+    return config.customModel.trim();
+  }
+  return config.model || getDefaultModel(config.provider);
+}
+
+/**
+ * Check if any AI provider is configured and enabled
+ */
+export function hasAnyAIConfigured(
+  configs: AIProviderConfig[] | undefined,
+): boolean {
+  if (!configs || configs.length === 0) return false;
+  return configs.some((c) => c.enabled && !!c.apiKey);
+}
+
+/**
+ * Get enabled provider configs with API keys, in priority order
+ */
+export function getEnabledConfigs(
+  configs: AIProviderConfig[] | undefined,
+): AIProviderConfig[] {
+  if (!configs) return [];
+  return configs.filter((c) => c.enabled && !!c.apiKey);
+}
+
+/**
  * Get all settings from storage
  */
 export async function getSettings(): Promise<StorageSettings> {
   const result = await chrome.storage.local.get([
     "linearApiKey",
-    "aiProvider",
-    "aiApiKey",
-    "aiModel",
     "defaultTeamId",
     "defaultProjectId",
     "includeMetadata",
@@ -132,15 +248,40 @@ export async function getSettings(): Promise<StorageSettings> {
     "summaryStyle",
     "summaryLanguage",
     "customSummaryPrompt",
+    "aiProviderConfigs",
+    // Legacy fields for migration
+    "aiProvider",
+    "aiApiKey",
+    "aiModel",
+    "customAiModel",
   ]);
 
-  const aiProvider = result.aiProvider || "none";
+  // Migrate legacy single-provider to configs array
+  let aiProviderConfigs: AIProviderConfig[] | undefined =
+    result.aiProviderConfigs;
+
+  if (
+    !aiProviderConfigs &&
+    result.aiProvider &&
+    result.aiProvider !== "none" &&
+    result.aiApiKey
+  ) {
+    aiProviderConfigs = [
+      {
+        id: crypto.randomUUID(),
+        provider: result.aiProvider as ActiveAIProvider,
+        apiKey: result.aiApiKey,
+        model: result.aiModel || getDefaultModel(result.aiProvider),
+        customModel: result.customAiModel || undefined,
+        enabled: true,
+      },
+    ];
+    // Persist migration
+    await chrome.storage.local.set({ aiProviderConfigs });
+  }
 
   return {
     linearApiKey: result.linearApiKey,
-    aiProvider,
-    aiApiKey: result.aiApiKey,
-    aiModel: result.aiModel || getDefaultModel(aiProvider),
     defaultTeamId: result.defaultTeamId,
     defaultProjectId: result.defaultProjectId,
     includeMetadata: result.includeMetadata !== false, // default true
@@ -148,6 +289,7 @@ export async function getSettings(): Promise<StorageSettings> {
     summaryStyle: result.summaryStyle || "concise",
     summaryLanguage: result.summaryLanguage || "English",
     customSummaryPrompt: result.customSummaryPrompt || "",
+    aiProviderConfigs: aiProviderConfigs || [],
   };
 }
 
@@ -179,9 +321,6 @@ export async function hasLinearApiKey(): Promise<boolean> {
  * Check if AI is configured
  */
 export async function hasAIConfigured(): Promise<boolean> {
-  const { aiProvider, aiApiKey } = await chrome.storage.local.get([
-    "aiProvider",
-    "aiApiKey",
-  ]);
-  return aiProvider !== "none" && !!aiApiKey;
+  const settings = await getSettings();
+  return hasAnyAIConfigured(settings.aiProviderConfigs);
 }

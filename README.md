@@ -1,4 +1,4 @@
-# Linear Web Clipper (v2.1)
+# Linear Web Clipper (v2.2)
 
 A Chrome extension that clips web pages and YouTube transcripts to create Linear issues with AI-powered summarization.
 
@@ -36,6 +36,7 @@ pnpm build
 ```
 
 Load in Chrome:
+
 1. Navigate to `chrome://extensions/`
 2. Enable "Developer mode"
 3. Click "Load unpacked" and select the `dist` folder
@@ -52,37 +53,37 @@ Load in Chrome:
 
 Add one or more AI providers in the settings page (AI tab) for summarization and transcript reformatting. Providers are tried in the order you set — if one fails, the next takes over automatically.
 
-| Provider | API Key |
-|----------|---------|
-| **OpenAI** | [platform.openai.com](https://platform.openai.com/api-keys) |
-| **Anthropic** | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
-| **Google Gemini** | [aistudio.google.com](https://aistudio.google.com/apikey) |
-| **DeepSeek** | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
-| **Grok (xAI)** | [console.x.ai](https://console.x.ai) |
-| **Groq** | [console.groq.com](https://console.groq.com/keys) |
-| **Mistral AI** | [console.mistral.ai](https://console.mistral.ai/api-keys) |
-| **OpenRouter** | [openrouter.ai](https://openrouter.ai/keys) (supports custom model IDs) |
+| Provider          | API Key                                                                 |
+| ----------------- | ----------------------------------------------------------------------- |
+| **OpenAI**        | [platform.openai.com](https://platform.openai.com/api-keys)             |
+| **Anthropic**     | [console.anthropic.com](https://console.anthropic.com/settings/keys)    |
+| **Google Gemini** | [aistudio.google.com](https://aistudio.google.com/apikey)               |
+| **DeepSeek**      | [platform.deepseek.com](https://platform.deepseek.com/api_keys)         |
+| **Grok (xAI)**    | [console.x.ai](https://console.x.ai)                                    |
+| **Groq**          | [console.groq.com](https://console.groq.com/keys)                       |
+| **Mistral AI**    | [console.mistral.ai](https://console.mistral.ai/api-keys)               |
+| **OpenRouter**    | [openrouter.ai](https://openrouter.ai/keys) (supports custom model IDs) |
 
 ## Usage
 
-| Provider | Models | API Key |
-|----------|--------|---------|
-| OpenAI | GPT-4o, GPT-4o-mini, o1, o1-mini, o3-mini | [platform.openai.com](https://platform.openai.com/api-keys) |
-| Anthropic | Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
-| Google Gemini | Gemini 2.0 Flash, Gemini 1.5 Pro, Gemini 1.5 Flash | [aistudio.google.com](https://aistudio.google.com/apikey) |
-| DeepSeek | DeepSeek V3, DeepSeek Reasoner | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
-| Grok (xAI) | Grok 2, Grok 2 Vision, Grok Beta | [console.x.ai](https://console.x.ai) |
+| Provider      | Models                                             | API Key                                                              |
+| ------------- | -------------------------------------------------- | -------------------------------------------------------------------- |
+| OpenAI        | GPT-4o, GPT-4o-mini, o1, o1-mini, o3-mini          | [platform.openai.com](https://platform.openai.com/api-keys)          |
+| Anthropic     | Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| Google Gemini | Gemini 2.0 Flash, Gemini 1.5 Pro, Gemini 1.5 Flash | [aistudio.google.com](https://aistudio.google.com/apikey)            |
+| DeepSeek      | DeepSeek V3, DeepSeek Reasoner                     | [platform.deepseek.com](https://platform.deepseek.com/api_keys)      |
+| Grok (xAI)    | Grok 2, Grok 2 Vision, Grok Beta                   | [console.x.ai](https://console.x.ai)                                 |
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| Frontend | React 19, TypeScript |
-| Build | Vite 7, CRXJS (Chrome Extension MV3) |
-| Content Extraction | Mozilla Readability |
-| Markdown Conversion | Turndown with GFM plugin |
-| AI Integration | Vercel AI SDK v6 |
-| API | Linear GraphQL API (@linear/sdk) |
+| Category            | Technology                           |
+| ------------------- | ------------------------------------ |
+| Frontend            | React 19, TypeScript                 |
+| Build               | Vite 7, CRXJS (Chrome Extension MV3) |
+| Content Extraction  | Mozilla Readability                  |
+| Markdown Conversion | Turndown with GFM plugin             |
+| AI Integration      | Vercel AI SDK v6                     |
+| API                 | Linear GraphQL API (@linear/sdk)     |
 
 ## Development
 
@@ -114,13 +115,13 @@ src/
 
 ## Permissions
 
-| Permission | Purpose |
-|------------|---------|
-| `sidePanel` | Display clipper UI |
-| `activeTab` | Read page content |
-| `storage` | Store settings locally |
-| `scripting` | Extract content from pages |
-| `<all_urls>` | Clip from any website |
+| Permission   | Purpose                    |
+| ------------ | -------------------------- |
+| `sidePanel`  | Display clipper UI         |
+| `activeTab`  | Read page content          |
+| `storage`    | Store settings locally     |
+| `scripting`  | Extract content from pages |
+| `<all_urls>` | Clip from any website      |
 
 ## Privacy
 
@@ -135,20 +136,24 @@ src/
 ## Troubleshooting
 
 **Extension not loading?**
+
 - Run `pnpm build` and verify `dist/` folder exists
 - Reload the extension in `chrome://extensions/`
 
 **YouTube transcript extraction fails?**
+
 - Not all videos have transcripts available
 - Verify the "Show transcript" button is visible on the video page
 - Private or restricted videos may not provide transcripts
 
 **AI summarization not working?**
+
 - Verify your API key is correct in settings
 - Check that you have API credits remaining with your provider
 - Long content may take 30-60 seconds to process
 
 **AI processing not working?**
+
 - Use the "Test Connection" button in settings to verify each provider
 - Check you have API credits remaining
 - If using multiple providers, ensure at least one is enabled with a valid key
@@ -171,6 +176,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Acknowledgments
 
 Built with:
+
 - [React](https://react.dev/)
 - [Vite](https://vitejs.dev/)
 - [CRXJS](https://crxjs.dev/vite-plugin)

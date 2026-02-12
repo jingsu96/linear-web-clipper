@@ -15,6 +15,9 @@ import {
   getEffectiveModelForConfig,
 } from "@/lib/storage";
 
+// Open side panel on extension icon click (single click)
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
 // Listen for messages from content scripts and sidepanel
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "EXTRACT_CONTENT") {

@@ -1,11 +1,19 @@
-import { generateText } from "ai";
+import { generateText, Output } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createXai } from "@ai-sdk/xai";
-import type { AIProvider, SummaryStyle } from "@/lib/storage";
-import { SUMMARY_STYLE_PROMPTS, getDefaultModel } from "@/lib/storage";
+import { createGroq } from "@ai-sdk/groq";
+import { createMistral } from "@ai-sdk/mistral";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { z } from "zod";
+import type { AIProvider, AIProviderConfig, SummaryStyle } from "@/lib/storage";
+import {
+  SUMMARY_STYLE_PROMPTS,
+  getDefaultModel,
+  getEffectiveModelForConfig,
+} from "@/lib/storage";
 
 // Listen for messages from content scripts and sidepanel
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -42,6 +50,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "REFORMAT_TRANSCRIPT") {
     handleReformatTranscript(message.payload)
+      .then((result) => sendResponse({ success: true, data: result }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (message.type === "VALIDATE_AI_CONFIG") {
+    handleValidateAIConfig(message.payload)
       .then((result) => sendResponse({ success: true, data: result }))
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
@@ -614,22 +629,139 @@ function createAIModel(
       return createDeepSeek({ apiKey })(modelName);
     case "grok":
       return createXai({ apiKey })(modelName);
+    case "groq":
+      return createGroq({ apiKey })(modelName);
+    case "mistral":
+      return createMistral({ apiKey })(modelName);
+    case "openrouter":
+      return createOpenRouter({ apiKey })(modelName);
     default:
       throw new Error("Unsupported AI provider");
+  }
+}
+
+/**
+ * Classify whether an error is transient (worth retrying with fallback)
+ * or permanent (auth error — rethrow immediately).
+ */
+function isTransientError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  // Auth errors should NOT trigger fallback
+  if (
+    message.includes("401") ||
+    message.includes("Unauthorized") ||
+    message.includes("invalid_api_key") ||
+    message.includes("403") ||
+    message.includes("Forbidden")
+  ) {
+    return false;
+  }
+  // These are transient — try next provider
+  return true;
+}
+
+/**
+ * Try each enabled provider config in priority order.
+ * Falls back on transient errors; rethrows auth errors immediately.
+ */
+async function withFallback<T>(
+  configs: AIProviderConfig[],
+  operation: (config: AIProviderConfig) => Promise<T>,
+): Promise<T> {
+  if (configs.length === 0) {
+    throw new Error("No AI providers configured. Please add a provider in settings.");
+  }
+
+  let lastError: unknown;
+
+  for (const config of configs) {
+    try {
+      return await operation(config);
+    } catch (error) {
+      lastError = error;
+      if (!isTransientError(error)) {
+        // Auth error — don't fallback, throw right away
+        throw error;
+      }
+      console.warn(
+        `[Background] Provider ${config.provider} failed, trying next:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  // All providers failed
+  throw lastError;
+}
+
+// Validate AI configuration with a minimal structured-output call
+const aiHealthSchema = z.object({
+  ok: z.boolean(),
+});
+
+async function handleValidateAIConfig(payload: {
+  apiKey: string;
+  provider: AIProvider;
+  model?: string;
+}) {
+  const { apiKey, provider, model: modelId } = payload;
+
+  if (!apiKey) {
+    throw new Error("API key is required");
+  }
+
+  if (provider === "none") {
+    throw new Error("No AI provider selected");
+  }
+
+  try {
+    const model = createAIModel(provider, apiKey, modelId);
+
+    const { output } = await generateText({
+      model,
+      prompt: 'Respond with ok set to true.',
+      output: Output.object({ schema: aiHealthSchema }),
+      maxOutputTokens: 20,
+    });
+
+    if (!output || output.ok !== true) {
+      throw new Error("Unexpected response from AI provider");
+    }
+
+    return { valid: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (message.includes("401") || message.includes("Unauthorized") || message.includes("invalid_api_key")) {
+      throw new Error("Invalid API key. Please check and try again.");
+    }
+    if (message.includes("403") || message.includes("Forbidden")) {
+      throw new Error("Access denied. Your API key may lack permissions for this model.");
+    }
+    if (message.includes("429") || message.includes("rate")) {
+      throw new Error("Rate limited. Please wait a moment and try again.");
+    }
+    if (message.includes("404") || message.includes("model_not_found") || message.includes("not found")) {
+      throw new Error("Model not found. The selected model may not be available on your plan.");
+    }
+    if (message.includes("network") || message.includes("fetch") || message.includes("ECONNREFUSED")) {
+      throw new Error("Network error. Please check your internet connection.");
+    }
+
+    throw new Error(`Validation failed: ${message}`);
   }
 }
 
 // Handle transcript reformatting (converts transcript to article format)
 async function handleReformatTranscript(payload: {
   content: string;
-  apiKey: string;
-  provider: AIProvider;
-  model?: string;
+  providerConfigs: AIProviderConfig[];
 }) {
-  const { content, apiKey, provider, model: modelId } = payload;
+  const { content, providerConfigs } = payload;
 
-  try {
-    const model = createAIModel(provider, apiKey, modelId);
+  return withFallback(providerConfigs, async (config) => {
+    const modelId = getEffectiveModelForConfig(config);
+    const model = createAIModel(config.provider, config.apiKey, modelId);
 
     const MAX_CHARS = 30000;
 
@@ -653,9 +785,7 @@ The output should read like a natural article, not a transcript. Here's the tran
 ${content}`,
       });
 
-      return {
-        reformattedContent: text,
-      };
+      return { reformattedContent: text };
     } else {
       // For very long transcripts, process in chunks
       const CHUNK_SIZE = 25000;
@@ -664,7 +794,6 @@ ${content}`,
         chunks.push(content.slice(i, i + CHUNK_SIZE));
       }
 
-      // Reformat each chunk
       const reformattedChunks = await Promise.all(
         chunks.map(async (chunk, index) => {
           const { text } = await generateText({
@@ -675,79 +804,54 @@ ${content}`,
         }),
       );
 
-      // Combine the reformatted chunks
-      const combinedArticle = reformattedChunks.join("\n\n");
-
-      return {
-        reformattedContent: combinedArticle,
-      };
+      return { reformattedContent: reformattedChunks.join("\n\n") };
     }
-  } catch (error) {
-    console.error("[Background] Transcript reformatting failed:", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Transcript reformatting failed: ${errorMessage}`);
-  }
+  });
 }
 
 // Handle content summarization
 async function handleSummarizeContent(payload: {
   content: string;
-  apiKey: string;
-  provider: AIProvider;
-  model?: string;
+  providerConfigs: AIProviderConfig[];
   summaryStyle?: SummaryStyle;
   summaryLanguage?: string;
   customPrompt?: string;
 }) {
   const {
     content,
-    apiKey,
-    provider,
-    model: modelId,
+    providerConfigs,
     summaryStyle = "concise",
     summaryLanguage = "English",
     customPrompt,
   } = payload;
 
-  try {
-    const model = createAIModel(provider, apiKey, modelId);
+  // Build the prompt once (shared across fallback attempts)
+  let basePrompt: string;
+  if (summaryStyle === "custom" && customPrompt) {
+    basePrompt = customPrompt;
+  } else if (summaryStyle !== "custom") {
+    basePrompt = SUMMARY_STYLE_PROMPTS[summaryStyle].prompt;
+  } else {
+    basePrompt = SUMMARY_STYLE_PROMPTS.concise.prompt;
+  }
 
-    // Get the appropriate prompt based on summary style
-    let basePrompt: string;
-    if (summaryStyle === "custom" && customPrompt) {
-      basePrompt = customPrompt;
-    } else if (summaryStyle !== "custom") {
-      basePrompt = SUMMARY_STYLE_PROMPTS[summaryStyle].prompt;
-    } else {
-      basePrompt = SUMMARY_STYLE_PROMPTS.concise.prompt;
-    }
+  basePrompt += `\n\nIMPORTANT: You MUST write the entire summary in ${summaryLanguage} only. Do NOT use the language of the source content - always output in ${summaryLanguage}.`;
 
-    // Add strong language instruction to the prompt
-    // Use emphatic language to ensure the model outputs in the correct language
-    // regardless of the input content's language
-    basePrompt += `\n\nIMPORTANT: You MUST write the entire summary in ${summaryLanguage} only. Do NOT use the language of the source content - always output in ${summaryLanguage}.`;
+  return withFallback(providerConfigs, async (config) => {
+    const modelId = getEffectiveModelForConfig(config);
+    const model = createAIModel(config.provider, config.apiKey, modelId);
 
-    // Check if content is too large for single summarization
-    // Use a larger threshold for cost optimization - summarize the most important parts
     const MAX_CHARS = 8000;
 
     if (content.length <= MAX_CHARS) {
-      // Direct summarization for small content
       const { text } = await generateText({
         model,
         prompt: `${basePrompt}\n\n${content}`,
       });
 
-      return {
-        success: true,
-        summary: text,
-      };
+      return { success: true, summary: text };
     } else {
-      // For large content, extract key sections and summarize
-      // This approach saves tokens by focusing on important parts
       const sections = splitContentBySections(content);
-
-      // Limit to first few sections to save tokens
       const importantSections = sections.slice(0, 5);
       const truncatedContent = importantSections
         .map((s) => s.slice(0, 1500))
@@ -758,17 +862,9 @@ async function handleSummarizeContent(payload: {
         prompt: `${basePrompt}\n\nNote: This is a longer document. Focus on the most important points from the following excerpts:\n\n${truncatedContent}`,
       });
 
-      return {
-        success: true,
-        summary: text,
-      };
+      return { success: true, summary: text };
     }
-  } catch (error) {
-    console.error("[Background] Summarization failed:", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[Background] Error details:", errorMessage);
-    throw new Error(`Summarization failed: ${errorMessage}`);
-  }
+  });
 }
 
 // Split markdown content by h2 headings
@@ -880,9 +976,3 @@ async function handleGetLinearData() {
   }
 }
 
-// Open sidepanel when extension icon is clicked
-chrome.action.onClicked.addListener(async (tab) => {
-  if (tab.id) {
-    await chrome.sidePanel.open({ tabId: tab.id });
-  }
-});

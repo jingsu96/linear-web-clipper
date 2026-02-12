@@ -1,4 +1,4 @@
-import type { AIProvider, SummaryStyle } from "./storage";
+import type { AIProvider, AIProviderConfig, SummaryStyle } from "./storage";
 
 /**
  * Message types for communication between different parts of the extension
@@ -9,7 +9,8 @@ export type MessageType =
   | "CREATE_LINEAR_ISSUE"
   | "SUMMARIZE_CONTENT"
   | "GET_LINEAR_DATA"
-  | "REFORMAT_TRANSCRIPT";
+  | "REFORMAT_TRANSCRIPT"
+  | "VALIDATE_AI_CONFIG";
 
 export interface Message<T = unknown> {
   type: MessageType;
@@ -72,9 +73,7 @@ export async function createLinearIssue(payload: {
  */
 export async function summarizeContent(payload: {
   content: string;
-  apiKey: string;
-  provider: AIProvider;
-  model?: string;
+  providerConfigs: AIProviderConfig[];
   summaryStyle?: SummaryStyle;
   summaryLanguage?: string;
   customPrompt?: string;
@@ -99,12 +98,24 @@ export async function getLinearData() {
  */
 export async function reformatTranscript(payload: {
   content: string;
+  providerConfigs: AIProviderConfig[];
+}) {
+  return sendMessage({
+    type: "REFORMAT_TRANSCRIPT",
+    payload,
+  });
+}
+
+/**
+ * Validate AI provider configuration by making a minimal test call
+ */
+export async function validateAIConfig(payload: {
   apiKey: string;
   provider: AIProvider;
   model?: string;
 }) {
   return sendMessage({
-    type: "REFORMAT_TRANSCRIPT",
+    type: "VALIDATE_AI_CONFIG",
     payload,
   });
 }

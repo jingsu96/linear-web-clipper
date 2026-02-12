@@ -13,8 +13,9 @@ export default defineManifest({
     default_icon: {
       48: "public/logo.png",
     },
+    default_popup: "src/popup/index.html",
   },
-  options_page: "src/popup/index.html",
+  options_page: "src/options/index.html",
   permissions: ["sidePanel", "activeTab", "storage", "scripting"],
   host_permissions: ["https://*/*"],
   background: {

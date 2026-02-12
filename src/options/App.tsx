@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   getSettings,
   saveSettings,
@@ -177,7 +177,10 @@ function ChevronDownIcon({ className }: { className?: string }) {
 export default function App() {
   const [settings, setSettings] = useState<StorageSettings>({});
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("linear");
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
 
@@ -191,6 +194,8 @@ export default function App() {
   // Drag and drop state
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const savedSettingsRef = useRef<string>("");
 
   const providerConfigs = settings.aiProviderConfigs || [];
 
@@ -208,20 +213,33 @@ export default function App() {
   async function loadSettings() {
     const stored = await getSettings();
     setSettings(stored);
+    savedSettingsRef.current = JSON.stringify(stored);
   }
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (JSON.stringify(settings) !== savedSettingsRef.current) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [settings]);
 
   async function handleSave() {
     setSaving(true);
-    setMessage("");
+    setMessage(null);
 
     try {
       await saveSettings(settings);
-      setMessage("Settings saved successfully!");
-      setTimeout(() => setMessage(""), 3000);
+      savedSettingsRef.current = JSON.stringify(settings);
+      setMessage({ type: "success", text: "Settings saved successfully!" });
+      setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      setMessage(
-        `Error: ${error instanceof Error ? error.message : "Failed to save"}`,
-      );
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to save",
+      });
     } finally {
       setSaving(false);
     }
@@ -246,6 +264,12 @@ export default function App() {
   }
 
   function handleRemoveProvider(id: string) {
+    const config = providerConfigs.find((c) => c.id === id);
+    const label = config
+      ? AI_PROVIDER_META[config.provider].label
+      : "this provider";
+    if (!window.confirm(`Remove ${label}? This cannot be undone.`)) return;
+
     updateConfigs(providerConfigs.filter((c) => c.id !== id));
     setValidationResults((prev) => {
       const next = { ...prev };
@@ -406,9 +430,11 @@ export default function App() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                id={`tab-${tab.id}`}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab.id}
+                aria-controls={`panel-${tab.id}`}
                 className={`tab ${activeTab === tab.id ? "active" : ""}`}
                 onClick={() => setActiveTab(tab.id)}
               >
@@ -421,8 +447,10 @@ export default function App() {
         <div className="tab-panels">
           {/* Linear tab */}
           <div
+            id="panel-linear"
             className="tab-panel"
             role="tabpanel"
+            aria-labelledby="tab-linear"
             data-active={activeTab === "linear"}
           >
             <div className="section-header">
@@ -477,8 +505,10 @@ export default function App() {
 
           {/* AI tab */}
           <div
+            id="panel-ai"
             className="tab-panel"
             role="tabpanel"
+            aria-labelledby="tab-ai"
             data-active={activeTab === "ai"}
           >
             <div className="section-header">
@@ -525,7 +555,6 @@ export default function App() {
                           type="button"
                           className="drag-handle"
                           aria-label={`Reorder ${meta.label}. Use arrow keys.`}
-                          tabIndex={0}
                           onKeyDown={(e) =>
                             handleKeyboardReorder(e, config.id)
                           }
@@ -640,7 +669,7 @@ export default function App() {
                                 value={config.apiKey}
                                 onChange={(e) =>
                                   handleUpdateConfig(config.id, {
-                                    apiKey: e.target.value,
+                                    apiKey: e.target.value.trim(),
                                   })
                                 }
                                 autoComplete="off"
@@ -750,8 +779,10 @@ export default function App() {
 
           {/* Summary tab */}
           <div
+            id="panel-summary"
             className="tab-panel"
             role="tabpanel"
+            aria-labelledby="tab-summary"
             data-active={activeTab === "summary"}
           >
             <div className="section-header">
@@ -864,8 +895,10 @@ export default function App() {
 
           {/* Preferences tab */}
           <div
+            id="panel-preferences"
             className="tab-panel"
             role="tabpanel"
+            aria-labelledby="tab-preferences"
             data-active={activeTab === "preferences"}
           >
             <div className="section-header">
@@ -928,11 +961,11 @@ export default function App() {
 
         {message && (
           <div
-            className={`message ${message.includes("Error") ? "error" : "success"}`}
+            className={`message ${message.type}`}
             role="status"
             aria-live="polite"
           >
-            {message}
+            {message.text}
           </div>
         )}
 

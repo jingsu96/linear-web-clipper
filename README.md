@@ -15,9 +15,10 @@
 
 - 📄 **Web Page Clipping** - Extract clean content using Mozilla Readability, convert to Markdown
 - 🎥 **YouTube Transcripts** - Auto-extract and reformat video transcripts into readable articles
-- 🤖 **AI-Powered** - Summarize content and reformat transcripts (OpenAI, Anthropic, Gemini)
+- 🤖 **AI-Powered** - Summarize content and reformat transcripts with 8 providers (OpenAI, Anthropic, Gemini, DeepSeek, Grok, Groq, Mistral, OpenRouter)
+- 🔄 **Multi-Provider Fallback** - Configure multiple AI providers in priority order; if one fails, the next is tried automatically
 - 📋 **Linear Integration** - Create issues directly in your workspace with full Markdown support
-- ⚙️ **Customizable** - Set default teams, projects, and enable auto-summarization
+- ⚙️ **Customizable** - Dedicated settings page with drag-and-drop provider ordering, connection testing, default teams/projects, and auto-summarization
 
 ## Installation
 
@@ -50,10 +51,18 @@ pnpm build
 
 ### Optional: Enable AI Features
 
-Configure an AI provider in settings for summarization and transcript reformatting:
-- **OpenAI** - Get API key from [platform.openai.com](https://platform.openai.com/api-keys)
-- **Anthropic** - Get API key from [console.anthropic.com](https://console.anthropic.com/)
-- **Google Gemini** - Get API key from [aistudio.google.com](https://aistudio.google.com/app/apikey)
+Add one or more AI providers in the settings page (AI tab) for summarization and transcript reformatting. Providers are tried in the order you set — if one fails, the next takes over automatically.
+
+| Provider | API Key |
+|----------|---------|
+| **OpenAI** | [platform.openai.com](https://platform.openai.com/api-keys) |
+| **Anthropic** | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| **Google Gemini** | [aistudio.google.com](https://aistudio.google.com/apikey) |
+| **DeepSeek** | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
+| **Grok (xAI)** | [console.x.ai](https://console.x.ai) |
+| **Groq** | [console.groq.com](https://console.groq.com/keys) |
+| **Mistral AI** | [console.mistral.ai](https://console.mistral.ai/api-keys) |
+| **OpenRouter** | [openrouter.ai](https://openrouter.ai/keys) (supports custom model IDs) |
 
 ## Usage
 
@@ -126,8 +135,9 @@ pnpm preview
 - Some private/restricted videos don't provide transcripts
 
 **AI processing not working?**
-- Verify API key is correct
+- Use the "Test Connection" button in settings to verify each provider
 - Check you have API credits remaining
+- If using multiple providers, ensure at least one is enabled with a valid key
 - Long transcripts may take 30-60 seconds
 
 ## Contributing

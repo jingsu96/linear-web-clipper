@@ -1,6 +1,23 @@
 import TurndownService from "turndown";
 import { gfm } from "turndown-plugin-gfm";
 
+/** Sanitize leaked HTML emphasis/bold tags from URLs (literal, entity-encoded, and percent-encoded) */
+function sanitizeUrl(url: string): string {
+  return url
+    // Literal HTML tags
+    .replace(/<\/?(em|i)>/gi, "_")
+    .replace(/<\/?(strong|b)>/gi, "__")
+    .replace(/<[^>]*>/g, "")
+    // HTML entity-encoded tags (&lt;em&gt;, &lt;/em&gt;, etc.)
+    .replace(/&lt;\/?(em|i)&gt;/gi, "_")
+    .replace(/&lt;\/?(strong|b)&gt;/gi, "__")
+    .replace(/&lt;[^&]*?&gt;/g, "")
+    // Percent-encoded tags (handle both literal / and %2F-encoded /)
+    .replace(/%3C(?:%2F|\/)?(?:em|i)%3E/gi, "_")
+    .replace(/%3C(?:%2F|\/)?(?:strong|b)%3E/gi, "__")
+    .replace(/%3C(?:%2F|\/)?\w[^%]*?%3E/gi, "");
+}
+
 export interface ExtractedContent {
   title: string;
   url: string;
@@ -16,7 +33,7 @@ const turndownService = new TurndownService({
   headingStyle: "atx",
   codeBlockStyle: "fenced",
   bulletListMarker: "-",
-  emDelimiter: "_",
+  emDelimiter: "*",
   linkStyle: "inlined",
   linkReferenceStyle: "full",
 });
@@ -42,7 +59,7 @@ turndownService.addRule("images", {
   replacement: (_content, node) => {
     const img = node as HTMLImageElement;
     const alt = img.alt || "image";
-    const src = img.src || img.getAttribute("data-src") || "";
+    const src = sanitizeUrl(img.src || img.getAttribute("data-src") || "");
 
     if (!src || src.startsWith("data:")) return "";
 
@@ -67,6 +84,23 @@ turndownService.addRule("images", {
     const imageMarkdown = `![${alt}](${src}${titlePart})`;
 
     return caption ? `${imageMarkdown}\n*${caption}*` : imageMarkdown;
+  },
+});
+
+// Sanitize link href URLs (overrides Turndown's default inlined link rule)
+turndownService.addRule("links", {
+  filter: (node, options) => {
+    return !!(
+      options.linkStyle === "inlined" &&
+      node.nodeName === "A" &&
+      node.getAttribute("href")
+    );
+  },
+  replacement: (content, node) => {
+    const a = node as HTMLAnchorElement;
+    const href = sanitizeUrl(a.getAttribute("href") || "");
+    const title = a.title ? ` "${a.title}"` : "";
+    return `[${content}](${href}${title})`;
   },
 });
 
@@ -278,42 +312,40 @@ function extractCanonicalUrl(iframeSrc: string): string | null {
   }
 }
 
-// Handle iframes and embeds - extract URL for Linear auto-embedding
+// Handle iframes and embeds - extract URL and produce markdown links
+// Linear auto-embeds bare URLs for supported platforms (YouTube, Loom, Descript, Figma).
+// For those, emit the URL on its own line so Linear renders the embed.
+// For extended-only platforms, use a markdown link.
 turndownService.addRule("embeds", {
   filter: (node) => node.nodeName === "IFRAME" || node.nodeName === "EMBED",
   replacement: (_content, node) => {
-    const src = (node as HTMLElement).getAttribute("src") || "";
+    const src = sanitizeUrl((node as HTMLElement).getAttribute("src") || "");
     if (!src) return "";
 
     const canonicalUrl = extractCanonicalUrl(src);
 
     if (canonicalUrl) {
-      // Return URL on its own line for Linear auto-embedding
-      return "\n\n" + canonicalUrl + "\n\n";
+      // Check if this is a Linear auto-embed platform first
+      const linearPlatform = LINEAR_EMBED_PLATFORMS.find((p) =>
+        p.pattern.test(canonicalUrl),
+      );
+      if (linearPlatform) {
+        // Bare URL on its own line — Linear will auto-embed it
+        return `\n\n${canonicalUrl}\n\n`;
+      }
+
+      // Extended-only platform: use a markdown link
+      const platform = EXTENDED_EMBED_PLATFORMS.find((p) =>
+        p.pattern.test(canonicalUrl),
+      );
+      const label = platform
+        ? platform.name.charAt(0).toUpperCase() + platform.name.slice(1)
+        : "Embedded content";
+      return `\n\n[${label}](${canonicalUrl})\n\n`;
     }
 
     // For unknown embeds, create a link
     return `\n\n[Embedded content](${src})\n\n`;
-  },
-});
-
-// Handle standalone links that should be embeddable
-turndownService.addRule("embeddableLinks", {
-  filter: (node) => {
-    if (node.nodeName !== "A") return false;
-    const href = (node as HTMLAnchorElement).href;
-    // Check if link is to an embeddable platform and is roughly the only content
-    const textContent = node.textContent?.trim() || "";
-    const isStandaloneish =
-      textContent === href ||
-      textContent.length < 100 ||
-      node.querySelector("img") !== null;
-    return isEmbeddablePlatform(href) && isStandaloneish;
-  },
-  replacement: (_content, node) => {
-    const href = (node as HTMLAnchorElement).href;
-    // Put embeddable links on their own line for auto-embedding
-    return "\n\n" + href + "\n\n";
   },
 });
 
@@ -428,10 +460,10 @@ function normalizeLanguage(lang: string): string {
 /**
  * Convert HTML content to clean markdown optimized for Linear
  */
-export function htmlToMarkdown(html: string): string {
+export function htmlToMarkdown(html: string, baseUrl?: string): string {
   try {
     // Pre-process HTML to handle edge cases
-    const processedHtml = preprocessHtml(html);
+    const processedHtml = preprocessHtml(html, baseUrl);
     const markdown = turndownService.turndown(processedHtml);
     return cleanMarkdown(markdown);
   } catch (error) {
@@ -443,7 +475,34 @@ export function htmlToMarkdown(html: string): string {
 /**
  * Pre-process HTML before conversion
  */
-function preprocessHtml(html: string): string {
+function preprocessHtml(html: string, baseUrl?: string): string {
+  // Sanitize URL attribute values in raw HTML before DOMParser can mishandle them.
+  // CMS markdown processing can convert underscores to <em>/<strong> tags inside URLs.
+  // Handles both double-quoted and single-quoted attributes, and both literal
+  // (<em>) and entity-encoded (&lt;em&gt;) tag corruption.
+  const urlAttrReplacer = (
+    match: string,
+    pre: string,
+    value: string,
+    post: string,
+  ) => {
+    if (
+      /<\/?(?:em|i|strong|b)\b/i.test(value) ||
+      /&lt;\/?(em|i|strong|b)/i.test(value)
+    ) {
+      return pre + sanitizeUrl(value) + post;
+    }
+    return match;
+  };
+  html = html.replace(
+    /((?:src|href|data-src)\s*=\s*")([^"]*?)(")/gi,
+    urlAttrReplacer,
+  );
+  html = html.replace(
+    /((?:src|href|data-src)\s*=\s*')([^']*?)(')/gi,
+    urlAttrReplacer,
+  );
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
 
@@ -491,6 +550,36 @@ function preprocessHtml(html: string): string {
     }
   });
 
+  // Resolve relative URLs to absolute using the page URL
+  if (baseUrl) {
+    const resolve = (rel: string) => {
+      try {
+        return new URL(rel, baseUrl).href;
+      } catch {
+        return rel;
+      }
+    };
+    doc.querySelectorAll("img[src]").forEach((el) => {
+      el.setAttribute("src", resolve(el.getAttribute("src")!));
+    });
+    doc.querySelectorAll("img[data-src]").forEach((el) => {
+      el.setAttribute("data-src", resolve(el.getAttribute("data-src")!));
+    });
+    doc.querySelectorAll("a[href]").forEach((el) => {
+      const href = el.getAttribute("href")!;
+      if (
+        !href.startsWith("#") &&
+        !href.startsWith("mailto:") &&
+        !href.startsWith("javascript:")
+      ) {
+        el.setAttribute("href", resolve(href));
+      }
+    });
+    doc.querySelectorAll("iframe[src], embed[src]").forEach((el) => {
+      el.setAttribute("src", resolve(el.getAttribute("src")!));
+    });
+  }
+
   return doc.body.innerHTML;
 }
 
@@ -511,26 +600,6 @@ function cleanMarkdown(markdown: string): string {
     .join("\n")
     // Remove leading/trailing whitespace
     .trim();
-
-  // Post-process: Convert markdown links to Linear-embeddable platforms into standalone URLs
-  // Linear auto-embeds URLs on their own line for YouTube, Loom, Descript, and Figma
-  const linearEmbedPattern =
-    /(youtube\.com|youtu\.be|loom\.com|descript\.com|figma\.com)/i;
-
-  // Replace markdown links [text](url) with standalone URL if it's embeddable
-  cleaned = cleaned.replace(
-    /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
-    (match, _text, url) => {
-      if (linearEmbedPattern.test(url)) {
-        // Return URL on its own line for auto-embedding
-        return `\n\n${url}\n\n`;
-      }
-      return match;
-    },
-  );
-
-  // Clean up any resulting excessive blank lines again
-  cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
 
   return cleaned;
 }
@@ -558,7 +627,7 @@ export function formatAsMarkdown(
     parts.push("");
   }
 
-  const markdownContent = htmlToMarkdown(content.htmlContent);
+  const markdownContent = htmlToMarkdown(content.htmlContent, content.url);
   parts.push(markdownContent);
 
   return parts.join("\n");

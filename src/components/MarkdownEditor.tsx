@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import "./MarkdownEditor.css";
 
 interface MarkdownEditorProps {
@@ -173,10 +173,46 @@ export default function MarkdownEditor({
  * Renders markdown as styled HTML with embed detection
  */
 function MarkdownPreview({ content }: { content: string }) {
-  const html = markdownToHtml(content);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const html = useMemo(() => markdownToHtml(content), [content]);
+
+  // Proxy external images through fetch() — extension pages have host_permissions
+  // which bypasses CORS and referrer/hotlink restrictions that block <img> tags
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const images = container.querySelectorAll<HTMLImageElement>("img[src]");
+    let cancelled = false;
+    const blobUrls: string[] = [];
+
+    const promises = Array.from(images).map(async (img) => {
+      const src = img.getAttribute("src");
+      if (!src || src.startsWith("blob:") || src.startsWith("data:")) return;
+
+      try {
+        const res = await fetch(src, { referrerPolicy: "no-referrer" });
+        if (cancelled || !res.ok) return;
+        const blob = await res.blob();
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        blobUrls.push(url);
+        img.src = url;
+      } catch {
+        // Leave original src as fallback
+      }
+    });
+    void Promise.allSettled(promises);
+
+    return () => {
+      cancelled = true;
+      blobUrls.forEach(URL.revokeObjectURL);
+    };
+  }, [html]);
 
   return (
     <div
+      ref={containerRef}
       className="markdown-rendered"
       dangerouslySetInnerHTML={{ __html: html }}
     />
@@ -204,6 +240,28 @@ function markdownToHtml(markdown: string): string {
   html = html.replace(/^## (.+)$/gm, "<h2>$1</h2>");
   html = html.replace(/^# (.+)$/gm, "<h1>$1</h1>");
 
+  // Images and links (before emphasis to protect URLs from emphasis regex)
+  const placeholders: string[] = [];
+  const placeholder = (s: string) => {
+    const idx = placeholders.length;
+    placeholders.push(s);
+    return `\x00PH${idx}\x00`;
+  };
+
+  html = html.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (_m, alt: string, src: string) =>
+      placeholder(`<img src="${src}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" />`),
+  );
+
+  html = html.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    (_m, text: string, href: string) =>
+      placeholder(
+        `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`,
+      ),
+  );
+
   // Bold and italic
   html = html.replace(/\*\*\*([^*]+)\*\*\*/g, "<strong><em>$1</em></strong>");
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
@@ -213,17 +271,8 @@ function markdownToHtml(markdown: string): string {
   // Strikethrough
   html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");
 
-  // Links
-  html = html.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
-  );
-
-  // Images
-  html = html.replace(
-    /!\[([^\]]*)\]\(([^)]+)\)/g,
-    '<img src="$2" alt="$1" loading="lazy" />',
-  );
+  // Restore placeholders
+  html = html.replace(/\x00PH(\d+)\x00/g, (_m, idx: string) => placeholders[parseInt(idx)]);
 
   // Linear-supported embeddable URLs (on their own line) - highlight them
   // Based on Linear docs: YouTube, Loom, Descript auto-embed; Figma requires integration

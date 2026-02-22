@@ -64,6 +64,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
+
 });
 
 // Handle content extraction
@@ -490,12 +491,12 @@ async function handleCreateLinearIssue(payload: {
     const MAX_DESCRIPTION_LENGTH = 250000;
     let finalDescription = description;
 
-    if (description.length > MAX_DESCRIPTION_LENGTH) {
+    if (finalDescription.length > MAX_DESCRIPTION_LENGTH) {
       console.warn(
-        `[Background] Description too long (${description.length} chars), truncating to ${MAX_DESCRIPTION_LENGTH}`,
+        `[Background] Description too long (${finalDescription.length} chars), truncating to ${MAX_DESCRIPTION_LENGTH}`,
       );
       finalDescription =
-        description.slice(0, MAX_DESCRIPTION_LENGTH - 100) +
+        finalDescription.slice(0, MAX_DESCRIPTION_LENGTH - 100) +
         "\n\n---\n\n*[Content truncated due to length]*";
     }
 

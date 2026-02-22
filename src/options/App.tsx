@@ -956,6 +956,30 @@ export default function App() {
                 </span>
               </label>
             </div>
+
+            <div className="form-group checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={settings.uploadImagesToLinear || false}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      uploadImagesToLinear: e.target.checked,
+                    })
+                  }
+                />
+                <span className="checkbox-label">
+                  <span className="checkbox-title">
+                    Upload images to Linear
+                    <span className="beta-badge">Beta</span>
+                  </span>
+                  <span className="checkbox-description">
+                    Re-host images on Linear's CDN so they always load
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
         </div>
 

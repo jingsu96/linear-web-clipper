@@ -7,6 +7,7 @@ import {
   getLinearData,
   reformatTranscript,
 } from "@/lib/messages";
+import { uploadMarkdownImages } from "@/lib/image-upload";
 import {
   formatAsMarkdown,
   generatePreview,
@@ -58,30 +59,30 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (content && settings) {
-      const md = formatAsMarkdown(content, settings.includeMetadata);
+    if (!content || !settings) return;
 
-      // Check if this is a YouTube transcript
-      const isYouTubeTranscript =
-        content.metaDescription === "YouTube Video Transcript";
+    const md = formatAsMarkdown(content, settings.includeMetadata);
 
+    // Check if this is a YouTube transcript
+    const isYouTubeTranscript =
+      content.metaDescription === "YouTube Video Transcript";
+
+    if (
+      isYouTubeTranscript &&
+      hasAnyAIConfigured(settings.aiProviderConfigs)
+    ) {
+      // Automatically reformat YouTube transcripts to article format
+      handleReformatTranscript(md);
+    } else {
+      setMarkdown(md);
+      setIssueTitle(content.title);
+
+      // Auto-summarize if enabled (for non-YouTube content)
       if (
-        isYouTubeTranscript &&
+        settings.autoSummarize &&
         hasAnyAIConfigured(settings.aiProviderConfigs)
       ) {
-        // Automatically reformat YouTube transcripts to article format
-        handleReformatTranscript(md);
-      } else {
-        setMarkdown(md);
-        setIssueTitle(content.title);
-
-        // Auto-summarize if enabled (for non-YouTube content)
-        if (
-          settings.autoSummarize &&
-          hasAnyAIConfigured(settings.aiProviderConfigs)
-        ) {
-          handleSummarize(md);
-        }
+        handleSummarize(md);
       }
     }
   }, [content, settings]);
@@ -273,14 +274,26 @@ export default function App() {
 
     setCreating(true);
     setError("");
-    setStatus("Creating Linear issue…");
 
     try {
+      // Upload images to Linear CDN if enabled, otherwise use markdown as-is
+      let description = markdown;
+      if (settings.uploadImagesToLinear && settings.linearApiKey) {
+        setStatus("Uploading images & creating issue…");
+        try {
+          description = await uploadMarkdownImages(markdown, settings.linearApiKey);
+        } catch {
+          // Fall back to original markdown if upload fails
+        }
+      } else {
+        setStatus("Creating Linear issue…");
+      }
+
       const result = await createLinearIssue({
         teamId: selectedTeam,
         projectId: selectedProject || undefined,
         title: issueTitle,
-        description: markdown,
+        description,
         summary: summary || undefined,
         apiKey: settings.linearApiKey,
       });

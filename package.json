@@ -32,7 +32,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
     "release": "node scripts/version.mjs"
   },
   "dependencies": {

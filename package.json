@@ -4,6 +4,7 @@
   "description": "Chrome extension to clip web pages and YouTube transcripts, creating Linear issues with AI-powered summarization and formatting",
   "type": "module",
   "private": true,
+  "packageManager": "pnpm@10.12.4",
   "license": "MIT",
   "author": "Jinghuang Su",
   "keywords": [

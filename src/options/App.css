@@ -666,6 +666,18 @@ select:focus-visible {
     white-space: nowrap;
 }
 
+.beta-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: #b45309;
+    background: #fef3c7;
+    padding: 1px 5px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+}
+
 .provider-model-badge {
     font-size: 11px;
     color: #8b8a94;

@@ -59,46 +59,53 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (content && settings) {
-      const md = formatAsMarkdown(content, settings.includeMetadata);
+    if (!content || !settings) return;
 
-      // Check if this is a YouTube transcript
-      const isYouTubeTranscript =
-        content.metaDescription === "YouTube Video Transcript";
+    let cancelled = false;
+    const md = formatAsMarkdown(content, settings.includeMetadata);
 
+    // Check if this is a YouTube transcript
+    const isYouTubeTranscript =
+      content.metaDescription === "YouTube Video Transcript";
+
+    if (
+      isYouTubeTranscript &&
+      hasAnyAIConfigured(settings.aiProviderConfigs)
+    ) {
+      // Automatically reformat YouTube transcripts to article format
+      handleReformatTranscript(md);
+    } else {
+      // Upload images to Linear CDN if enabled, then set markdown
+      if (settings.uploadImagesToLinear && settings.linearApiKey) {
+        setStatus("Uploading images to Linear…");
+        uploadMarkdownImages(md, settings.linearApiKey)
+          .then((updated) => {
+            if (cancelled) return;
+            setMarkdown(updated);
+            setStatus("");
+          })
+          .catch(() => {
+            if (cancelled) return;
+            setMarkdown(md);
+            setStatus("");
+          });
+      } else {
+        setMarkdown(md);
+      }
+      setIssueTitle(content.title);
+
+      // Auto-summarize if enabled (for non-YouTube content)
       if (
-        isYouTubeTranscript &&
+        settings.autoSummarize &&
         hasAnyAIConfigured(settings.aiProviderConfigs)
       ) {
-        // Automatically reformat YouTube transcripts to article format
-        handleReformatTranscript(md);
-      } else {
-        // Upload images to Linear CDN if enabled, then set markdown
-        if (settings.uploadImagesToLinear && settings.linearApiKey) {
-          setStatus("Uploading images to Linear…");
-          uploadMarkdownImages(md, settings.linearApiKey)
-            .then((updated) => {
-              setMarkdown(updated);
-              setStatus("");
-            })
-            .catch(() => {
-              setMarkdown(md);
-              setStatus("");
-            });
-        } else {
-          setMarkdown(md);
-        }
-        setIssueTitle(content.title);
-
-        // Auto-summarize if enabled (for non-YouTube content)
-        if (
-          settings.autoSummarize &&
-          hasAnyAIConfigured(settings.aiProviderConfigs)
-        ) {
-          handleSummarize(md);
-        }
+        handleSummarize(md);
       }
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [content, settings]);
 
   async function initialize() {

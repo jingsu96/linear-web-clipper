@@ -972,6 +972,7 @@ export default function App() {
                 <span className="checkbox-label">
                   <span className="checkbox-title">
                     Upload images to Linear
+                    <span className="beta-badge">Beta</span>
                   </span>
                   <span className="checkbox-description">
                     Re-host images on Linear's CDN so they always load

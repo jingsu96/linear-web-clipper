@@ -186,7 +186,7 @@ function MarkdownPreview({ content }: { content: string }) {
     let cancelled = false;
     const blobUrls: string[] = [];
 
-    images.forEach(async (img) => {
+    const promises = Array.from(images).map(async (img) => {
       const src = img.getAttribute("src");
       if (!src || src.startsWith("blob:") || src.startsWith("data:")) return;
 
@@ -202,6 +202,7 @@ function MarkdownPreview({ content }: { content: string }) {
         // Leave original src as fallback
       }
     });
+    void Promise.allSettled(promises);
 
     return () => {
       cancelled = true;
@@ -265,6 +266,7 @@ function markdownToHtml(markdown: string): string {
   html = html.replace(/\*\*\*([^*]+)\*\*\*/g, "<strong><em>$1</em></strong>");
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  html = html.replace(/_([^_]+)_/g, "<em>$1</em>");
 
   // Strikethrough
   html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");

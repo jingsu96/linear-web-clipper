@@ -313,6 +313,9 @@ function extractCanonicalUrl(iframeSrc: string): string | null {
 }
 
 // Handle iframes and embeds - extract URL and produce markdown links
+// Linear auto-embeds bare URLs for supported platforms (YouTube, Loom, Descript, Figma).
+// For those, emit the URL on its own line so Linear renders the embed.
+// For extended-only platforms, use a markdown link.
 turndownService.addRule("embeds", {
   filter: (node) => node.nodeName === "IFRAME" || node.nodeName === "EMBED",
   replacement: (_content, node) => {
@@ -322,7 +325,16 @@ turndownService.addRule("embeds", {
     const canonicalUrl = extractCanonicalUrl(src);
 
     if (canonicalUrl) {
-      // Find platform name for a readable link label
+      // Check if this is a Linear auto-embed platform first
+      const linearPlatform = LINEAR_EMBED_PLATFORMS.find((p) =>
+        p.pattern.test(canonicalUrl),
+      );
+      if (linearPlatform) {
+        // Bare URL on its own line — Linear will auto-embed it
+        return `\n\n${canonicalUrl}\n\n`;
+      }
+
+      // Extended-only platform: use a markdown link
       const platform = EXTENDED_EMBED_PLATFORMS.find((p) =>
         p.pattern.test(canonicalUrl),
       );

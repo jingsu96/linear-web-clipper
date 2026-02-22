@@ -9,6 +9,11 @@
  * The Linear fileUpload mutation + S3 PUT stays in the sidepanel.
  */
 
+/** Per-image size limit (10 MB). */
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+/** Cumulative upload budget per clip (50 MB). */
+const MAX_TOTAL_UPLOAD = 50 * 1024 * 1024;
+
 /**
  * Fetch images from the active tab's page context.
  * Returns a map of original URL → data URL for every image that was
@@ -146,31 +151,33 @@ export async function uploadMarkdownImages(
   // Fetch all images from the page's JS context
   const dataUrlMap = await fetchImagesFromPage(uniqueUrls);
 
-  // Upload each fetched image to Linear
+  // Upload each fetched image to Linear sequentially with size limits
   const assetUrlMap: Record<string, string> = {};
-  await Promise.all(
-    uniqueUrls.map(async (url) => {
-      const dataUrl = dataUrlMap[url];
-      if (!dataUrl) return;
+  let totalUploaded = 0;
 
-      const blob = dataUrlToBlob(dataUrl);
-      const filename = url.split("/").pop()?.split("?")[0] || "image.jpg";
-      const assetUrl = await uploadBlobToLinear(blob, filename, apiKey);
-      if (assetUrl) {
-        assetUrlMap[url] = assetUrl;
-      }
-    }),
-  );
+  for (const url of uniqueUrls) {
+    const dataUrl = dataUrlMap[url];
+    if (!dataUrl) continue;
 
-  // Replace original URLs with Linear CDN URLs
-  let result = markdown;
-  for (const match of matches) {
-    const [fullMatch, alt, src] = match;
-    const assetUrl = assetUrlMap[src];
+    const blob = dataUrlToBlob(dataUrl);
+
+    if (blob.size > MAX_IMAGE_SIZE) continue;
+    if (totalUploaded + blob.size > MAX_TOTAL_UPLOAD) break;
+
+    const filename = url.split("/").pop()?.split("?")[0] || "image.jpg";
+    const assetUrl = await uploadBlobToLinear(blob, filename, apiKey);
     if (assetUrl) {
-      result = result.replace(fullMatch, `![${alt}](${assetUrl})`);
+      assetUrlMap[url] = assetUrl;
+      totalUploaded += blob.size;
     }
   }
 
-  return result;
+  // Single-pass replacement of original URLs with Linear CDN URLs
+  return markdown.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (full, alt: string, src: string) => {
+      const assetUrl = assetUrlMap[src];
+      return assetUrl ? `![${alt}](${assetUrl})` : full;
+    },
+  );
 }

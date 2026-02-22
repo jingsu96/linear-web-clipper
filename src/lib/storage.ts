@@ -40,6 +40,7 @@ export interface StorageSettings {
   summaryStyle?: SummaryStyle;
   summaryLanguage?: string;
   customSummaryPrompt?: string;
+  uploadImagesToLinear?: boolean;
   aiProviderConfigs?: AIProviderConfig[];
   // Legacy fields — kept for migration only
   aiProvider?: AIProvider;
@@ -245,6 +246,7 @@ export async function getSettings(): Promise<StorageSettings> {
     "defaultProjectId",
     "includeMetadata",
     "autoSummarize",
+    "uploadImagesToLinear",
     "summaryStyle",
     "summaryLanguage",
     "customSummaryPrompt",
@@ -286,6 +288,7 @@ export async function getSettings(): Promise<StorageSettings> {
     defaultProjectId: result.defaultProjectId,
     includeMetadata: result.includeMetadata !== false, // default true
     autoSummarize: result.autoSummarize || false,
+    uploadImagesToLinear: result.uploadImagesToLinear || false,
     summaryStyle: result.summaryStyle || "concise",
     summaryLanguage: result.summaryLanguage || "English",
     customSummaryPrompt: result.customSummaryPrompt || "",

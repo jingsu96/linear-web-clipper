@@ -7,6 +7,7 @@ import {
   getLinearData,
   reformatTranscript,
 } from "@/lib/messages";
+import { uploadMarkdownImages } from "@/lib/image-upload";
 import {
   formatAsMarkdown,
   generatePreview,
@@ -72,7 +73,21 @@ export default function App() {
         // Automatically reformat YouTube transcripts to article format
         handleReformatTranscript(md);
       } else {
-        setMarkdown(md);
+        // Upload images to Linear CDN if enabled, then set markdown
+        if (settings.uploadImagesToLinear && settings.linearApiKey) {
+          setStatus("Uploading images to Linear…");
+          uploadMarkdownImages(md, settings.linearApiKey)
+            .then((updated) => {
+              setMarkdown(updated);
+              setStatus("");
+            })
+            .catch(() => {
+              setMarkdown(md);
+              setStatus("");
+            });
+        } else {
+          setMarkdown(md);
+        }
         setIssueTitle(content.title);
 
         // Auto-summarize if enabled (for non-YouTube content)

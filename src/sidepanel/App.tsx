@@ -61,7 +61,6 @@ export default function App() {
   useEffect(() => {
     if (!content || !settings) return;
 
-    let cancelled = false;
     const md = formatAsMarkdown(content, settings.includeMetadata);
 
     // Check if this is a YouTube transcript
@@ -75,23 +74,7 @@ export default function App() {
       // Automatically reformat YouTube transcripts to article format
       handleReformatTranscript(md);
     } else {
-      // Upload images to Linear CDN if enabled, then set markdown
-      if (settings.uploadImagesToLinear && settings.linearApiKey) {
-        setStatus("Uploading images to Linear…");
-        uploadMarkdownImages(md, settings.linearApiKey)
-          .then((updated) => {
-            if (cancelled) return;
-            setMarkdown(updated);
-            setStatus("");
-          })
-          .catch(() => {
-            if (cancelled) return;
-            setMarkdown(md);
-            setStatus("");
-          });
-      } else {
-        setMarkdown(md);
-      }
+      setMarkdown(md);
       setIssueTitle(content.title);
 
       // Auto-summarize if enabled (for non-YouTube content)
@@ -102,10 +85,6 @@ export default function App() {
         handleSummarize(md);
       }
     }
-
-    return () => {
-      cancelled = true;
-    };
   }, [content, settings]);
 
   async function initialize() {
@@ -295,14 +274,26 @@ export default function App() {
 
     setCreating(true);
     setError("");
-    setStatus("Creating Linear issue…");
 
     try {
+      // Upload images to Linear CDN if enabled, otherwise use markdown as-is
+      let description = markdown;
+      if (settings.uploadImagesToLinear && settings.linearApiKey) {
+        setStatus("Uploading images & creating issue…");
+        try {
+          description = await uploadMarkdownImages(markdown, settings.linearApiKey);
+        } catch {
+          // Fall back to original markdown if upload fails
+        }
+      } else {
+        setStatus("Creating Linear issue…");
+      }
+
       const result = await createLinearIssue({
         teamId: selectedTeam,
         projectId: selectedProject || undefined,
         title: issueTitle,
-        description: markdown,
+        description,
         summary: summary || undefined,
         apiKey: settings.linearApiKey,
       });

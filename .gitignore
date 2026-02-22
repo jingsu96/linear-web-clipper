@@ -33,3 +33,6 @@ playwright-report/
 *.njsproj
 *.sln
 *.sw?
+
+test-results
+playwright-report

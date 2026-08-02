@@ -132,8 +132,9 @@ export const AI_MODELS: Record<
     { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Fast)" },
   ],
   deepseek: [
-    { value: "deepseek-chat", label: "DeepSeek V3 (Compatible)" },
-    { value: "deepseek-reasoner", label: "DeepSeek Reasoner (Reasoning)" },
+    // Legacy aliases (deepseek-chat/-reasoner) are deprecated as of mid-2026
+    { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash (Fast)" },
+    { value: "deepseek-v4-pro", label: "DeepSeek V4 Pro (Powerful)" },
   ],
   grok: [
     { value: "grok-4.1-thinking", label: "Grok 4.1 Thinking" },

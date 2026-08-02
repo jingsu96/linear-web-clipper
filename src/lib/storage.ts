@@ -109,46 +109,46 @@ export const AI_MODELS: Record<
   Exclude<AIProvider, "none">,
   { value: string; label: string }[]
 > = {
+  // Fallback lists only — the options page fetches live model lists from each
+  // provider's API (see lib/models.ts). Ordered fast → powerful; the first
+  // entry is the default for newly added providers.
   openai: [
-    { value: "gpt-5.2", label: "GPT-5.2" },
-    { value: "gpt-5.1", label: "GPT-5.1" },
-    { value: "gpt-5-mini", label: "GPT-5 mini" },
-    { value: "gpt-5-nano", label: "GPT-5 nano" },
+    { value: "gpt-5.6-luna", label: "GPT-5.6 Luna (Fastest)" },
+    { value: "gpt-5.6-terra", label: "GPT-5.6 Terra (Balanced)" },
+    { value: "gpt-5.6-sol", label: "GPT-5.6 Sol (Powerful)" },
   ],
   anthropic: [
-    {
-      value: "claude-haiku-4-5",
-      label: "Claude 4.5 Haiku (Fastest)",
-    },
-    {
-      value: "claude-sonnet-4-5",
-      label: "Claude 4.5 Sonnet (Balanced)",
-    },
-    { value: "claude-opus-4-5", label: "Claude 4.5 Opus (Powerful)" },
+    { value: "claude-haiku-4-5", label: "Claude 4.5 Haiku (Fastest)" },
+    { value: "claude-sonnet-5", label: "Claude Sonnet 5 (Balanced)" },
+    { value: "claude-opus-5", label: "Claude Opus 5 (Powerful)" },
   ],
   gemini: [
-    { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Powerful)" },
-    { value: "gemini-3-pro-preview", label: "Gemini 3 Pro (Preview)" },
     { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Fast)" },
+    { value: "gemini-3.6-flash", label: "Gemini 3.6 Flash (Balanced)" },
+    { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Powerful)" },
+    { value: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro (Preview)" },
   ],
   deepseek: [
-    { value: "deepseek-chat", label: "DeepSeek V3 (Compatible)" },
-    { value: "deepseek-reasoner", label: "DeepSeek Reasoner (Reasoning)" },
+    // Legacy aliases (deepseek-chat/-reasoner) are deprecated as of mid-2026
+    { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash (Fast)" },
+    { value: "deepseek-v4-pro", label: "DeepSeek V4 Pro (Powerful)" },
   ],
   grok: [
-    { value: "grok-4.1-thinking", label: "Grok 4.1 Thinking" },
-    { value: "grok-4.1-fast", label: "Grok 4.1 Fast" },
-    { value: "grok-4", label: "Grok 4" },
+    // "-latest" aliases auto-track xAI's hot-swaps
+    { value: "grok-4.20-non-reasoning-latest", label: "Grok 4.20 Fast" },
+    { value: "grok-4.20-reasoning-latest", label: "Grok 4.20 Thinking" },
+    { value: "grok-4.5-latest", label: "Grok 4.5 (Flagship)" },
   ],
   groq: [
-    { value: "llama-3.3-70b-versatile", label: "Llama 3.3 70B Versatile" },
-    { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B Instant (Fast)" },
-    { value: "gemma2-9b-it", label: "Gemma 2 9B" },
+    // Groq retires models aggressively — only Production-tier entries here
+    // (Llama 3.x and Gemma 2 shut down in 2025-2026)
+    { value: "openai/gpt-oss-20b", label: "GPT-OSS 20B (Fast)" },
+    { value: "openai/gpt-oss-120b", label: "GPT-OSS 120B (Powerful)" },
   ],
   mistral: [
-    { value: "mistral-large-latest", label: "Mistral Large (Powerful)" },
     { value: "mistral-small-latest", label: "Mistral Small (Fast)" },
-    { value: "pixtral-large-latest", label: "Pixtral Large (Multimodal)" },
+    { value: "mistral-medium-latest", label: "Mistral Medium (Multimodal)" },
+    { value: "mistral-large-latest", label: "Mistral Large (Powerful)" },
   ],
   openrouter: [
     {
@@ -156,7 +156,7 @@ export const AI_MODELS: Record<
       label: "Llama 3.3 70B Instruct",
     },
     { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-    { value: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
+    { value: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5" },
   ],
 };
 

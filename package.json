@@ -43,7 +43,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "release": "node scripts/version.mjs"
+    "release": "node scripts/version.mjs",
+    "publish:cws": "node scripts/publish-cws.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.23",

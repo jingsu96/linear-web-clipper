@@ -11,6 +11,19 @@ on:
           - patch
           - minor
           - major
+      publish_to_cws:
+        description: "Submit the build to the Chrome Web Store"
+        required: false
+        type: boolean
+        default: true
+      cws_target:
+        description: "Chrome Web Store audience"
+        required: false
+        type: choice
+        default: default
+        options:
+          - default
+          - trustedTesters
 
 permissions:
   contents: write
@@ -80,5 +93,28 @@ jobs:
             --title "v${{ steps.version.outputs.version }}" \
             --notes-file /tmp/release-notes.md
 
-      # TODO: Add Chrome Web Store auto-publish when CWS API credentials are available
-      # See: https://developer.chrome.com/docs/webstore/using-api
+      # Requires the CWS_* repository secrets — see docs/RELEASING.md.
+      # https://developer.chrome.com/docs/webstore/using-api
+      - name: Publish to Chrome Web Store
+        if: ${{ inputs.publish_to_cws }}
+        env:
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          node scripts/publish-cws.mjs "${{ steps.zip.outputs.zip_file }}" \
+            --target=${{ inputs.cws_target }}
+
+      - name: Summary
+        run: |
+          {
+            echo "## v${{ steps.version.outputs.version }}"
+            echo ""
+            echo "- GitHub release: published"
+            if [ "${{ inputs.publish_to_cws }}" = "true" ]; then
+              echo "- Chrome Web Store: submitted for review (\`${{ inputs.cws_target }}\`)"
+            else
+              echo "- Chrome Web Store: skipped"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

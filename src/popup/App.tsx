@@ -36,7 +36,9 @@ export default function App() {
           {isConfigured ? (
             <>
               <div className="status-card">
-                <span className="status-icon" aria-hidden="true">&check;</span>
+                <span className="status-icon" aria-hidden="true">
+                  &check;
+                </span>
                 <span className="status-text">Extension configured</span>
               </div>
               <div className="action-buttons">
@@ -59,8 +61,12 @@ export default function App() {
           ) : (
             <>
               <div className="status-card">
-                <span className="status-icon not-configured" aria-hidden="true">!</span>
-                <span className="status-text">Set up your Linear API key to get started</span>
+                <span className="status-icon not-configured" aria-hidden="true">
+                  !
+                </span>
+                <span className="status-text">
+                  Set up your Linear API key to get started
+                </span>
               </div>
               <div className="action-buttons">
                 <button

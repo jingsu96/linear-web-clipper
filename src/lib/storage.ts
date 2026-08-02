@@ -16,11 +16,7 @@ export type AIProvider =
 export type ActiveAIProvider = Exclude<AIProvider, "none">;
 
 export type SummaryStyle =
-  | "concise"
-  | "educational"
-  | "comprehensive"
-  | "inspired"
-  | "custom";
+  "concise" | "educational" | "comprehensive" | "inspired" | "custom";
 
 export interface AIProviderConfig {
   id: string;
@@ -131,12 +127,9 @@ export const AI_MODELS: Record<
     { value: "claude-opus-4-5", label: "Claude 4.5 Opus (Powerful)" },
   ],
   gemini: [
-    { value: "gemini-2.5-pro", label: "Gemini 3 Flash (Fast)" },
-    { value: "gemini-3-pro-preview", label: "Gemini 3 Preview" },
-    {
-      value: "gemini-2.5-flash-lite-preview-06-17",
-      label: "Gemini 2.5 Flash",
-    },
+    { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Powerful)" },
+    { value: "gemini-3-pro-preview", label: "Gemini 3 Pro (Preview)" },
+    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Fast)" },
   ],
   deepseek: [
     { value: "deepseek-chat", label: "DeepSeek V3 (Compatible)" },
@@ -158,7 +151,10 @@ export const AI_MODELS: Record<
     { value: "pixtral-large-latest", label: "Pixtral Large (Multimodal)" },
   ],
   openrouter: [
-    { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B Instruct" },
+    {
+      value: "meta-llama/llama-3.3-70b-instruct",
+      label: "Llama 3.3 70B Instruct",
+    },
     { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
     { value: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4" },
   ],

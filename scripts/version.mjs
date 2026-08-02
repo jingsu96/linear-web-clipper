@@ -23,7 +23,9 @@ const bumpType = process.argv[2];
 const dryRun = process.argv.includes("--dry-run");
 
 if (!bumpType || !BUMP_TYPES.includes(bumpType)) {
-  console.error(`Usage: node scripts/version.mjs <${BUMP_TYPES.join("|")}> [--dry-run]`);
+  console.error(
+    `Usage: node scripts/version.mjs <${BUMP_TYPES.join("|")}> [--dry-run]`,
+  );
   process.exit(1);
 }
 

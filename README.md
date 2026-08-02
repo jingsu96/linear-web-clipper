@@ -96,7 +96,16 @@ pnpm build
 
 # Preview build
 pnpm preview
+
+# Quality checks
+pnpm typecheck      # TypeScript
+pnpm lint           # ESLint
+pnpm format         # Prettier (format:check to verify only)
+pnpm test           # Vitest unit tests
+pnpm test:e2e       # Playwright extension tests (requires pnpm build first)
 ```
+
+All of the above run in CI on every push and pull request.
 
 ## Project Structure
 
@@ -105,12 +114,13 @@ src/
   background/      Service worker (content extraction, API calls)
   sidepanel/       Main clipper UI
   popup/           Settings page
-  content/         Content script
   components/      Shared React components
   lib/
     storage.ts     Settings and local storage
     messages.ts    Chrome message passing
     content-extractor.ts   HTML to Markdown conversion
+tests/
+  e2e/             Playwright tests that load the built extension
 ```
 
 ## Permissions

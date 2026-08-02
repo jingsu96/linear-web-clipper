@@ -64,7 +64,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
-
 });
 
 // Handle content extraction
@@ -269,9 +268,12 @@ function extractPageContent() {
       })();
     }
 
-    // Use Readability to extract main content
-    // @ts-ignore - Readability is imported globally
-    const { Readability } = window as any;
+    // Use Readability to extract main content (injected globally via public/Readability.js)
+    const { Readability } = window as unknown as {
+      Readability?: new (doc: Document) => {
+        parse(): { content?: string } | null;
+      };
+    };
 
     let articleElement: HTMLElement;
 
@@ -294,39 +296,40 @@ function extractPageContent() {
       articleElement = document.body;
     }
 
-    // Clone the content to avoid modifying
+    // Clone the content to avoid modifying the page
     const clonedContent = articleElement.cloneNode(true) as HTMLElement;
 
-    // Remove unwanted elements
+    const countWords = (el: HTMLElement) =>
+      (el.textContent || "").trim().split(/\s+/).filter(Boolean).length;
+    const wordsBeforeCleanup = countWords(clonedContent);
+
+    // Pass 1: remove unambiguous clutter by selector. Deliberately
+    // conservative — wildcard matches like [class*="comment"] or removing
+    // sections by heading keywords deletes legitimate content (articles
+    // about code comments, papers with "Discussion" sections, anything
+    // after a "Summary" heading).
     const selectorsToRemove = [
       "script",
       "style",
+      "noscript",
       "nav",
       "header",
       "footer",
+      "aside",
       ".advertisement",
       ".ad",
+      ".ads",
       ".social-share",
+      ".share-buttons",
+      ".newsletter-signup",
       ".comments",
-      ".comment",
+      ".comments-section",
       ".comment-section",
       ".comment-list",
       ".comment-area",
-      ".comments-section",
       "#comments",
-      "#comment",
       "#disqus_thread",
       "#discourse-comments",
-      '[id*="comment" i]',
-      '[class*="comment" i]',
-      "#references",
-      ".references",
-      '[id*="reference" i]',
-      '[class*="reference" i]',
-      "#see-also",
-      "#external-links",
-      "#further-reading",
-      "#bibliography",
       ".mw-references-wrap", // Wikipedia references
       ".reflist", // Wikipedia reference list
     ];
@@ -335,117 +338,63 @@ function extractPageContent() {
       clonedContent.querySelectorAll(selector).forEach((el) => el.remove());
     });
 
-    // Find conclusion section and remove everything after it
-    const allHeadings = Array.from(
-      clonedContent.querySelectorAll("h1, h2, h3, h4, h5, h6"),
-    );
-    let conclusionIndex = -1;
-
-    // First pass: find the conclusion heading
-    for (let i = 0; i < allHeadings.length; i++) {
-      const heading = allHeadings[i];
-      const text = heading.textContent?.toLowerCase() || "";
-      if (
-        text.includes("conclusion") ||
-        text.includes("summary") ||
-        text.includes("in summary") ||
-        text.includes("to sum up") ||
-        text.includes("in conclusion") ||
-        text.includes("final thoughts") ||
-        text.includes("wrapping up") ||
-        text.includes("takeaway") ||
-        text.includes("key points")
-      ) {
-        conclusionIndex = i;
-        break;
-      }
-    }
-
-    // If we found a conclusion, find the next same-level heading and remove everything from there
-    if (conclusionIndex >= 0) {
-      const conclusionHeading = allHeadings[conclusionIndex] as HTMLElement;
-      const conclusionLevel = parseInt(conclusionHeading.tagName.substring(1));
-
-      // Find the next heading at the same level or higher
-      for (let i = conclusionIndex + 1; i < allHeadings.length; i++) {
-        const nextHeading = allHeadings[i] as HTMLElement;
-        const nextLevel = parseInt(nextHeading.tagName.substring(1));
-
-        if (nextLevel <= conclusionLevel) {
-          // Remove this heading and everything after it
-          let toRemove: Element | null = nextHeading;
-          while (toRemove) {
-            const nextSibling = toRemove.nextSibling as Element | null;
-            toRemove.remove();
-            toRemove = nextSibling;
+    // Pass 2: remove elements the site itself hides on small screens.
+    // Rules like `@media (max-width: 768px) { .sidebar { display: none } }`
+    // are a strong clutter signal, and only the live page (not a clone or
+    // parser) exposes its stylesheets — technique borrowed from Defuddle.
+    try {
+      const mobileHiddenSelectors: string[] = [];
+      for (const sheet of Array.from(document.styleSheets)) {
+        let rules: CSSRuleList;
+        try {
+          rules = sheet.cssRules; // cross-origin stylesheets throw
+        } catch {
+          continue;
+        }
+        for (const rule of Array.from(rules)) {
+          if (!(rule instanceof CSSMediaRule)) continue;
+          const condition = rule.conditionText || rule.media.mediaText;
+          const maxWidth = condition.match(/max-width:\s*(\d+)/);
+          if (!maxWidth || parseInt(maxWidth[1], 10) < 600) continue;
+          for (const inner of Array.from(rule.cssRules)) {
+            if (
+              inner instanceof CSSStyleRule &&
+              inner.style.display === "none" &&
+              inner.selectorText &&
+              inner.selectorText.length < 200
+            ) {
+              mobileHiddenSelectors.push(inner.selectorText);
+            }
           }
-          break;
         }
       }
+      for (const selector of mobileHiddenSelectors) {
+        try {
+          clonedContent.querySelectorAll(selector).forEach((el) => el.remove());
+        } catch {
+          // selector may not be valid outside its stylesheet context
+        }
+      }
+    } catch {
+      // stylesheet scan is best-effort
     }
 
-    // Second pass: Remove other unwanted sections
-    const remainingHeadings = clonedContent.querySelectorAll(
-      "h1, h2, h3, h4, h5, h6",
-    );
-    remainingHeadings.forEach((heading) => {
-      const text = heading.textContent?.toLowerCase() || "";
-
-      if (
-        text.includes("reference") ||
-        text.includes("see also") ||
-        text.includes("external link") ||
-        text.includes("further reading") ||
-        text.includes("bibliography") ||
-        text.includes("citation") ||
-        text.includes("notes") ||
-        text.includes("comment") ||
-        text.includes("discussion") ||
-        text.includes("leave a reply") ||
-        text.includes("post a comment") ||
-        text.includes("add comment")
-      ) {
-        // Remove the heading and all content until the next heading or end
-        let current = heading.nextElementSibling;
-        heading.remove();
-        while (current && !current.matches("h1, h2, h3, h4, h5, h6")) {
-          const next = current.nextElementSibling;
-          current.remove();
-          current = next;
-        }
-      }
-    });
-
-    // Additional comment detection: Look for elements with "comment" in their text content
-    // Only remove if it looks like a comment section (multiple comment elements or large blocks)
-    const allElements = clonedContent.querySelectorAll("*");
-    allElements.forEach((element) => {
-      const text = element.textContent?.toLowerCase() || "";
-      const id = element.id?.toLowerCase() || "";
-      const className = element.className?.toString().toLowerCase() || "";
-
-      // Check if element or its attributes contain comment-related keywords
-      const hasCommentKeyword =
-        id.includes("comment") ||
-        className.includes("comment") ||
-        (text.includes("comment") && text.length < 100); // Short text with "comment"
-
-      // Check if it's a comment form or container
-      const isCommentContainer =
-        element.tagName === "FORM" ||
-        element.querySelector('textarea[placeholder*="comment" i]') !== null ||
-        element.querySelector('input[placeholder*="comment" i]') !== null;
-
-      if (hasCommentKeyword || isCommentContainer) {
-        element.remove();
-      }
-    });
+    // Graduated fallback: if cleanup gutted a page that had real content,
+    // fall back to the un-cleaned extraction rather than losing the article
+    let finalContent = clonedContent;
+    if (countWords(clonedContent) < 50 && wordsBeforeCleanup >= 50) {
+      finalContent = articleElement.cloneNode(true) as HTMLElement;
+      finalContent
+        .querySelectorAll("script, style, noscript")
+        .forEach((el) => el.remove());
+    }
 
     // Get the HTML content
-    const htmlContent = clonedContent.innerHTML;
+    const htmlContent = finalContent.innerHTML;
 
     // Get text content as fallback
-    const textContent = clonedContent.innerText;
+    const textContent =
+      finalContent.innerText || finalContent.textContent || "";
 
     // Get meta description
     const metaDescription =
@@ -501,7 +450,12 @@ async function handleCreateLinearIssue(payload: {
     }
 
     // Build the input object conditionally
-    const input: any = {
+    const input: {
+      teamId: string;
+      title: string;
+      description: string;
+      projectId?: string;
+    } = {
       teamId,
       title,
       description: finalDescription,
@@ -609,11 +563,11 @@ async function addCommentToIssue(
 
 // Helper function to create AI model based on provider
 // Returns any to handle SDK version differences (LanguageModelV2 vs V3)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createAIModel(
   provider: AIProvider,
   apiKey: string,
   modelId?: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
   const modelName = modelId || getDefaultModel(provider);
 
@@ -673,7 +627,9 @@ async function withFallback<T>(
   operation: (config: AIProviderConfig) => Promise<T>,
 ): Promise<T> {
   if (configs.length === 0) {
-    throw new Error("No AI providers configured. Please add a provider in settings.");
+    throw new Error(
+      "No AI providers configured. Please add a provider in settings.",
+    );
   }
 
   let lastError: unknown;
@@ -723,7 +679,7 @@ async function handleValidateAIConfig(payload: {
 
     const { output } = await generateText({
       model,
-      prompt: 'Respond with ok set to true.',
+      prompt: "Respond with ok set to true.",
       output: Output.object({ schema: aiHealthSchema }),
       maxOutputTokens: 20,
     });
@@ -736,23 +692,47 @@ async function handleValidateAIConfig(payload: {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
-    if (message.includes("401") || message.includes("Unauthorized") || message.includes("invalid_api_key")) {
-      throw new Error("Invalid API key. Please check and try again.");
+    if (
+      message.includes("401") ||
+      message.includes("Unauthorized") ||
+      message.includes("invalid_api_key")
+    ) {
+      throw new Error("Invalid API key. Please check and try again.", {
+        cause: error,
+      });
     }
     if (message.includes("403") || message.includes("Forbidden")) {
-      throw new Error("Access denied. Your API key may lack permissions for this model.");
+      throw new Error(
+        "Access denied. Your API key may lack permissions for this model.",
+        { cause: error },
+      );
     }
     if (message.includes("429") || message.includes("rate")) {
-      throw new Error("Rate limited. Please wait a moment and try again.");
+      throw new Error("Rate limited. Please wait a moment and try again.", {
+        cause: error,
+      });
     }
-    if (message.includes("404") || message.includes("model_not_found") || message.includes("not found")) {
-      throw new Error("Model not found. The selected model may not be available on your plan.");
+    if (
+      message.includes("404") ||
+      message.includes("model_not_found") ||
+      message.includes("not found")
+    ) {
+      throw new Error(
+        "Model not found. The selected model may not be available on your plan.",
+        { cause: error },
+      );
     }
-    if (message.includes("network") || message.includes("fetch") || message.includes("ECONNREFUSED")) {
-      throw new Error("Network error. Please check your internet connection.");
+    if (
+      message.includes("network") ||
+      message.includes("fetch") ||
+      message.includes("ECONNREFUSED")
+    ) {
+      throw new Error("Network error. Please check your internet connection.", {
+        cause: error,
+      });
     }
 
-    throw new Error(`Validation failed: ${message}`);
+    throw new Error(`Validation failed: ${message}`, { cause: error });
   }
 }
 
@@ -949,10 +929,19 @@ async function handleGetLinearData() {
     }
 
     // Transform the nested structure to flat lists
-    const teams = result.data.teams.nodes;
+    interface LinearTeamNode {
+      id: string;
+      name: string;
+      key: string;
+      projects: {
+        nodes: { id: string; name: string; state: string }[];
+      };
+    }
 
-    const projects = teams.flatMap((team: any) =>
-      team.projects.nodes.map((project: any) => ({
+    const teams: LinearTeamNode[] = result.data.teams.nodes;
+
+    const projects = teams.flatMap((team) =>
+      team.projects.nodes.map((project) => ({
         ...project,
         team: {
           id: team.id,
@@ -961,7 +950,7 @@ async function handleGetLinearData() {
       })),
     );
 
-    const teamsData = teams.map((team: any) => ({
+    const teamsData = teams.map((team) => ({
       id: team.id,
       name: team.name,
       key: team.key,
@@ -979,4 +968,3 @@ async function handleGetLinearData() {
     throw error;
   }
 }
-

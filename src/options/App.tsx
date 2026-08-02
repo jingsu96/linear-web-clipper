@@ -16,6 +16,7 @@ import type {
   SummaryStyle,
 } from "@/lib/storage";
 import { validateAIConfig } from "@/lib/messages";
+import { getModelsForProvider, type ModelOption } from "@/lib/models";
 import "./App.css";
 
 const LANGUAGES = [
@@ -191,6 +192,18 @@ export default function App() {
     Record<string, { ok: boolean; message: string }>
   >({});
 
+  // Live model lists, fetched from each provider's API (cached 24h; static fallback)
+  const [modelLists, setModelLists] = useState<
+    Partial<
+      Record<
+        ActiveAIProvider,
+        { models: ModelOption[]; source: "live" | "cache" | "static" }
+      >
+    >
+  >({});
+  const [refreshingModelsFor, setRefreshingModelsFor] =
+    useState<ActiveAIProvider | null>(null);
+
   // Drag and drop state
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -199,16 +212,45 @@ export default function App() {
 
   const providerConfigs = settings.aiProviderConfigs || [];
 
-  const updateConfigs = useCallback(
-    (newConfigs: AIProviderConfig[]) => {
-      setSettings((prev) => ({ ...prev, aiProviderConfigs: newConfigs }));
-    },
-    [],
-  );
+  const updateConfigs = useCallback((newConfigs: AIProviderConfig[]) => {
+    setSettings((prev) => ({ ...prev, aiProviderConfigs: newConfigs }));
+  }, []);
 
   useEffect(() => {
     loadSettings();
   }, []);
+
+  const loadModels = useCallback(
+    async (
+      provider: ActiveAIProvider,
+      apiKey: string | undefined,
+      forceRefresh = false,
+    ) => {
+      if (forceRefresh) setRefreshingModelsFor(provider);
+      try {
+        const result = await getModelsForProvider(provider, apiKey, {
+          forceRefresh,
+        });
+        setModelLists((prev) => ({ ...prev, [provider]: result }));
+      } finally {
+        if (forceRefresh) setRefreshingModelsFor(null);
+      }
+    },
+    [],
+  );
+
+  // Fetch the live model list when a provider card is expanded.
+  // Deliberately keyed on expandedCardId only — refetching on every
+  // API-key keystroke would spam the provider.
+  useEffect(() => {
+    if (!expandedCardId) return;
+    const config = (settings.aiProviderConfigs || []).find(
+      (c) => c.id === expandedCardId,
+    );
+    if (!config) return;
+    loadModels(config.provider, config.apiKey || undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandedCardId, loadModels]);
 
   async function loadSettings() {
     const stored = await getSettings();
@@ -283,7 +325,11 @@ export default function App() {
     updateConfigs(
       providerConfigs.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     );
-    if (patch.apiKey !== undefined || patch.model !== undefined || patch.customModel !== undefined) {
+    if (
+      patch.apiKey !== undefined ||
+      patch.model !== undefined ||
+      patch.customModel !== undefined
+    ) {
       setValidationResults((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -407,9 +453,7 @@ export default function App() {
   }
 
   const usedProviders = new Set(providerConfigs.map((c) => c.provider));
-  const availableProviders = ALL_PROVIDERS.filter(
-    (p) => !usedProviders.has(p),
-  );
+  const availableProviders = ALL_PROVIDERS.filter((p) => !usedProviders.has(p));
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "linear", label: "Linear" },
@@ -514,8 +558,8 @@ export default function App() {
             <div className="section-header">
               <h2>AI Providers</h2>
               <p className="section-description">
-                Add providers in priority order. If one fails, the next is
-                tried automatically.
+                Add providers in priority order. If one fails, the next is tried
+                automatically.
               </p>
             </div>
 
@@ -555,17 +599,13 @@ export default function App() {
                           type="button"
                           className="drag-handle"
                           aria-label={`Reorder ${meta.label}. Use arrow keys.`}
-                          onKeyDown={(e) =>
-                            handleKeyboardReorder(e, config.id)
-                          }
+                          onKeyDown={(e) => handleKeyboardReorder(e, config.id)}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <DragHandleIcon />
                         </button>
 
-                        <span className="provider-priority">
-                          {index + 1}
-                        </span>
+                        <span className="provider-priority">{index + 1}</span>
 
                         <span className="provider-name">{meta.label}</span>
 
@@ -573,9 +613,11 @@ export default function App() {
                           {config.provider === "openrouter" &&
                           config.customModel?.trim()
                             ? config.customModel.trim()
-                            : AI_MODELS[config.provider].find(
-                                (m) => m.value === config.model,
-                              )?.label || config.model}
+                            : (
+                                modelLists[config.provider]?.models ??
+                                AI_MODELS[config.provider]
+                              ).find((m) => m.value === config.model)?.label ||
+                              config.model}
                         </span>
 
                         <div className="provider-card-actions">
@@ -604,9 +646,30 @@ export default function App() {
                       {isExpanded && (
                         <div className="provider-card-detail">
                           <div className="form-group">
-                            <label htmlFor={`model-${config.id}`}>
-                              Model
-                            </label>
+                            <div className="model-label-row">
+                              <label htmlFor={`model-${config.id}`}>
+                                Model
+                              </label>
+                              <button
+                                type="button"
+                                className="refresh-models"
+                                onClick={() =>
+                                  loadModels(
+                                    config.provider,
+                                    config.apiKey || undefined,
+                                    true,
+                                  )
+                                }
+                                disabled={
+                                  refreshingModelsFor === config.provider
+                                }
+                                aria-label={`Refresh ${meta.label} model list`}
+                              >
+                                {refreshingModelsFor === config.provider
+                                  ? "Refreshing…"
+                                  : "Refresh"}
+                              </button>
+                            </div>
                             <select
                               id={`model-${config.id}`}
                               value={config.model}
@@ -616,12 +679,41 @@ export default function App() {
                                 })
                               }
                             >
-                              {AI_MODELS[config.provider].map((m) => (
-                                <option key={m.value} value={m.value}>
-                                  {m.label}
-                                </option>
-                              ))}
+                              {(() => {
+                                const list =
+                                  modelLists[config.provider]?.models ??
+                                  AI_MODELS[config.provider];
+                                // Keep the saved model selectable even if the
+                                // provider no longer lists it
+                                const options =
+                                  config.model &&
+                                  !list.some((m) => m.value === config.model)
+                                    ? [
+                                        {
+                                          value: config.model,
+                                          label: `${config.model} (saved)`,
+                                        },
+                                        ...list,
+                                      ]
+                                    : list;
+                                return options.map((m) => (
+                                  <option key={m.value} value={m.value}>
+                                    {m.label}
+                                  </option>
+                                ));
+                              })()}
                             </select>
+                            <small className="model-source-hint">
+                              {modelLists[config.provider]?.source === "live" &&
+                                "Model list fetched from provider."}
+                              {modelLists[config.provider]?.source ===
+                                "cache" &&
+                                "Model list from cache (refreshed daily)."}
+                              {(modelLists[config.provider]?.source ===
+                                "static" ||
+                                !modelLists[config.provider]) &&
+                                "Built-in model list. Add an API key and refresh to fetch the latest."}
+                            </small>
                           </div>
 
                           {config.provider === "openrouter" && (
@@ -945,9 +1037,7 @@ export default function App() {
                   disabled={!hasAnyAIConfigured(providerConfigs)}
                 />
                 <span className="checkbox-label">
-                  <span className="checkbox-title">
-                    Auto-summarize on clip
-                  </span>
+                  <span className="checkbox-title">Auto-summarize on clip</span>
                   <span className="checkbox-description">
                     {!hasAnyAIConfigured(providerConfigs)
                       ? "Configure AI provider first"
@@ -1000,9 +1090,7 @@ export default function App() {
             onClick={handleSave}
             disabled={saving || !settings.linearApiKey}
           >
-            {saving && (
-              <span className="button-spinner" aria-hidden="true" />
-            )}
+            {saving && <span className="button-spinner" aria-hidden="true" />}
             {saving ? "Saving\u2026" : "Save Settings"}
           </button>
         </div>

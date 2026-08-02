@@ -64,7 +64,7 @@ pnpm lint           # ESLint
 pnpm format         # Prettier
 ```
 
-Every push and pull request runs the full suite in CI. Releases are cut from the **Release** GitHub Action (version bump → changelog → tag → GitHub Release with the extension ZIP).
+Every push and pull request runs the full suite in CI. Releases are cut from the **Release** GitHub Action (version bump → changelog → build → tag → GitHub Release → Chrome Web Store submission). See [docs/RELEASING.md](docs/RELEASING.md) for the one-time store credential setup.
 
 ```
 src/

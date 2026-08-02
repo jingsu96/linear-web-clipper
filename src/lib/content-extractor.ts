@@ -3,19 +3,21 @@ import { gfm } from "turndown-plugin-gfm";
 
 /** Sanitize leaked HTML emphasis/bold tags from URLs (literal, entity-encoded, and percent-encoded) */
 function sanitizeUrl(url: string): string {
-  return url
-    // Literal HTML tags
-    .replace(/<\/?(em|i)>/gi, "_")
-    .replace(/<\/?(strong|b)>/gi, "__")
-    .replace(/<[^>]*>/g, "")
-    // HTML entity-encoded tags (&lt;em&gt;, &lt;/em&gt;, etc.)
-    .replace(/&lt;\/?(em|i)&gt;/gi, "_")
-    .replace(/&lt;\/?(strong|b)&gt;/gi, "__")
-    .replace(/&lt;[^&]*?&gt;/g, "")
-    // Percent-encoded tags (handle both literal / and %2F-encoded /)
-    .replace(/%3C(?:%2F|\/)?(?:em|i)%3E/gi, "_")
-    .replace(/%3C(?:%2F|\/)?(?:strong|b)%3E/gi, "__")
-    .replace(/%3C(?:%2F|\/)?\w[^%]*?%3E/gi, "");
+  return (
+    url
+      // Literal HTML tags
+      .replace(/<\/?(em|i)>/gi, "_")
+      .replace(/<\/?(strong|b)>/gi, "__")
+      .replace(/<[^>]*>/g, "")
+      // HTML entity-encoded tags (&lt;em&gt;, &lt;/em&gt;, etc.)
+      .replace(/&lt;\/?(em|i)&gt;/gi, "_")
+      .replace(/&lt;\/?(strong|b)&gt;/gi, "__")
+      .replace(/&lt;[^&]*?&gt;/g, "")
+      // Percent-encoded tags (handle both literal / and %2F-encoded /)
+      .replace(/%3C(?:%2F|\/)?(?:em|i)%3E/gi, "_")
+      .replace(/%3C(?:%2F|\/)?(?:strong|b)%3E/gi, "__")
+      .replace(/%3C(?:%2F|\/)?\w[^%]*?%3E/gi, "")
+  );
 }
 
 export interface ExtractedContent {
@@ -587,17 +589,18 @@ function preprocessHtml(html: string, baseUrl?: string): string {
  * Clean up markdown output for optimal Linear compatibility
  */
 function cleanMarkdown(markdown: string): string {
-  let cleaned = markdown
+  const cleaned = markdown
     // Normalize line endings
     .replace(/\r\n/g, "\n")
-    // Remove excessive blank lines (more than 2)
-    .replace(/\n{3,}/g, "\n\n")
     // Clean up spaces before punctuation
     .replace(/ +([.,;:!?])/g, "$1")
-    // Remove trailing spaces on lines
+    // Remove trailing spaces on lines (before collapsing blank lines,
+    // so whitespace-only lines count as blank)
     .split("\n")
     .map((line) => line.trimEnd())
     .join("\n")
+    // Remove excessive blank lines (more than 2)
+    .replace(/\n{3,}/g, "\n\n")
     // Remove leading/trailing whitespace
     .trim();
 

@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { getSettings, hasLinearApiKey, hasAnyAIConfigured, getEnabledConfigs } from "@/lib/storage";
+import {
+  getSettings,
+  hasLinearApiKey,
+  hasAnyAIConfigured,
+  getEnabledConfigs,
+} from "@/lib/storage";
 import {
   extractContent,
   createLinearIssue,
@@ -67,13 +72,11 @@ export default function App() {
     const isYouTubeTranscript =
       content.metaDescription === "YouTube Video Transcript";
 
-    if (
-      isYouTubeTranscript &&
-      hasAnyAIConfigured(settings.aiProviderConfigs)
-    ) {
+    if (isYouTubeTranscript && hasAnyAIConfigured(settings.aiProviderConfigs)) {
       // Automatically reformat YouTube transcripts to article format
       handleReformatTranscript(md);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derives editor state once per extraction result
       setMarkdown(md);
       setIssueTitle(content.title);
 
@@ -85,6 +88,8 @@ export default function App() {
         handleSummarize(md);
       }
     }
+    // Handlers are recreated every render; including them would re-trigger AI calls on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content, settings]);
 
   async function initialize() {
@@ -281,7 +286,10 @@ export default function App() {
       if (settings.uploadImagesToLinear && settings.linearApiKey) {
         setStatus("Uploading images & creating issue…");
         try {
-          description = await uploadMarkdownImages(markdown, settings.linearApiKey);
+          description = await uploadMarkdownImages(
+            markdown,
+            settings.linearApiKey,
+          );
         } catch {
           // Fall back to original markdown if upload fails
         }
@@ -485,19 +493,18 @@ export default function App() {
               </section>
             )}
 
-            {hasAnyAIConfigured(settings.aiProviderConfigs) &&
-              !summary && (
-                <section className="actions-section">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => handleSummarize()}
-                    disabled={summarizing}
-                  >
-                    {summarizing ? "Summarizing…" : "Generate Summary"}
-                  </button>
-                </section>
-              )}
+            {hasAnyAIConfigured(settings.aiProviderConfigs) && !summary && (
+              <section className="actions-section">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => handleSummarize()}
+                  disabled={summarizing}
+                >
+                  {summarizing ? "Summarizing…" : "Generate Summary"}
+                </button>
+              </section>
+            )}
 
             <section className="linear-section">
               <h3>Create Linear Issue</h3>

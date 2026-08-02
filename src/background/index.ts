@@ -64,7 +64,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
-
 });
 
 // Handle content extraction
@@ -269,9 +268,12 @@ function extractPageContent() {
       })();
     }
 
-    // Use Readability to extract main content
-    // @ts-ignore - Readability is imported globally
-    const { Readability } = window as any;
+    // Use Readability to extract main content (injected globally via public/Readability.js)
+    const { Readability } = window as unknown as {
+      Readability?: new (doc: Document) => {
+        parse(): { content?: string } | null;
+      };
+    };
 
     let articleElement: HTMLElement;
 
@@ -501,7 +503,12 @@ async function handleCreateLinearIssue(payload: {
     }
 
     // Build the input object conditionally
-    const input: any = {
+    const input: {
+      teamId: string;
+      title: string;
+      description: string;
+      projectId?: string;
+    } = {
       teamId,
       title,
       description: finalDescription,
@@ -609,11 +616,11 @@ async function addCommentToIssue(
 
 // Helper function to create AI model based on provider
 // Returns any to handle SDK version differences (LanguageModelV2 vs V3)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function createAIModel(
   provider: AIProvider,
   apiKey: string,
   modelId?: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
   const modelName = modelId || getDefaultModel(provider);
 
@@ -673,7 +680,9 @@ async function withFallback<T>(
   operation: (config: AIProviderConfig) => Promise<T>,
 ): Promise<T> {
   if (configs.length === 0) {
-    throw new Error("No AI providers configured. Please add a provider in settings.");
+    throw new Error(
+      "No AI providers configured. Please add a provider in settings.",
+    );
   }
 
   let lastError: unknown;
@@ -723,7 +732,7 @@ async function handleValidateAIConfig(payload: {
 
     const { output } = await generateText({
       model,
-      prompt: 'Respond with ok set to true.',
+      prompt: "Respond with ok set to true.",
       output: Output.object({ schema: aiHealthSchema }),
       maxOutputTokens: 20,
     });
@@ -736,23 +745,47 @@ async function handleValidateAIConfig(payload: {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
-    if (message.includes("401") || message.includes("Unauthorized") || message.includes("invalid_api_key")) {
-      throw new Error("Invalid API key. Please check and try again.");
+    if (
+      message.includes("401") ||
+      message.includes("Unauthorized") ||
+      message.includes("invalid_api_key")
+    ) {
+      throw new Error("Invalid API key. Please check and try again.", {
+        cause: error,
+      });
     }
     if (message.includes("403") || message.includes("Forbidden")) {
-      throw new Error("Access denied. Your API key may lack permissions for this model.");
+      throw new Error(
+        "Access denied. Your API key may lack permissions for this model.",
+        { cause: error },
+      );
     }
     if (message.includes("429") || message.includes("rate")) {
-      throw new Error("Rate limited. Please wait a moment and try again.");
+      throw new Error("Rate limited. Please wait a moment and try again.", {
+        cause: error,
+      });
     }
-    if (message.includes("404") || message.includes("model_not_found") || message.includes("not found")) {
-      throw new Error("Model not found. The selected model may not be available on your plan.");
+    if (
+      message.includes("404") ||
+      message.includes("model_not_found") ||
+      message.includes("not found")
+    ) {
+      throw new Error(
+        "Model not found. The selected model may not be available on your plan.",
+        { cause: error },
+      );
     }
-    if (message.includes("network") || message.includes("fetch") || message.includes("ECONNREFUSED")) {
-      throw new Error("Network error. Please check your internet connection.");
+    if (
+      message.includes("network") ||
+      message.includes("fetch") ||
+      message.includes("ECONNREFUSED")
+    ) {
+      throw new Error("Network error. Please check your internet connection.", {
+        cause: error,
+      });
     }
 
-    throw new Error(`Validation failed: ${message}`);
+    throw new Error(`Validation failed: ${message}`, { cause: error });
   }
 }
 
@@ -949,10 +982,19 @@ async function handleGetLinearData() {
     }
 
     // Transform the nested structure to flat lists
-    const teams = result.data.teams.nodes;
+    interface LinearTeamNode {
+      id: string;
+      name: string;
+      key: string;
+      projects: {
+        nodes: { id: string; name: string; state: string }[];
+      };
+    }
 
-    const projects = teams.flatMap((team: any) =>
-      team.projects.nodes.map((project: any) => ({
+    const teams: LinearTeamNode[] = result.data.teams.nodes;
+
+    const projects = teams.flatMap((team) =>
+      team.projects.nodes.map((project) => ({
         ...project,
         team: {
           id: team.id,
@@ -961,7 +1003,7 @@ async function handleGetLinearData() {
       })),
     );
 
-    const teamsData = teams.map((team: any) => ({
+    const teamsData = teams.map((team) => ({
       id: team.id,
       name: team.name,
       key: team.key,
@@ -979,4 +1021,3 @@ async function handleGetLinearData() {
     throw error;
   }
 }
-

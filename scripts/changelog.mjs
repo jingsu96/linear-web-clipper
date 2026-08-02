@@ -65,7 +65,9 @@ for (const line of rawLog.split("\n")) {
   if (match) {
     const [, type, message] = match;
     const heading = TYPE_MAP[type] || "Other";
-    (groups[heading] ??= []).push(message.charAt(0).toUpperCase() + message.slice(1));
+    (groups[heading] ??= []).push(
+      message.charAt(0).toUpperCase() + message.slice(1),
+    );
   } else {
     (groups["Other"] ??= []).push(line.charAt(0).toUpperCase() + line.slice(1));
   }

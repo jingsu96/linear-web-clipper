@@ -251,7 +251,9 @@ function markdownToHtml(markdown: string): string {
   html = html.replace(
     /!\[([^\]]*)\]\(([^)]+)\)/g,
     (_m, alt: string, src: string) =>
-      placeholder(`<img src="${src}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" />`),
+      placeholder(
+        `<img src="${src}" alt="${alt}" loading="lazy" referrerpolicy="no-referrer" />`,
+      ),
   );
 
   html = html.replace(
@@ -271,8 +273,12 @@ function markdownToHtml(markdown: string): string {
   // Strikethrough
   html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");
 
-  // Restore placeholders
-  html = html.replace(/\x00PH(\d+)\x00/g, (_m, idx: string) => placeholders[parseInt(idx)]);
+  // Restore placeholders (NUL bytes are used as sentinels that cannot appear in user text)
+  html = html.replace(
+    // eslint-disable-next-line no-control-regex
+    /\x00PH(\d+)\x00/g,
+    (_m, idx: string) => placeholders[parseInt(idx)],
+  );
 
   // Linear-supported embeddable URLs (on their own line) - highlight them
   // Based on Linear docs: YouTube, Loom, Descript auto-embed; Figma requires integration

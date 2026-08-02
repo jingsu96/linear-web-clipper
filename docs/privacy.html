@@ -1,852 +1,816 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Privacy Policy - Linear Web Clipper</title>
-        <style>
-            *,
-            *::before,
-            *::after {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-
-            body {
-                font-family:
-                    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-                    "Helvetica Neue", "Arial", sans-serif;
-                line-height: 1.7;
-                color: #1a1a1a;
-                background: #fafafa;
-                padding: 40px 20px;
-                -webkit-font-smoothing: antialiased;
-                -moz-osx-font-smoothing: grayscale;
-            }
-
-            .container {
-                max-width: 720px;
-                margin: 0 auto;
-                background: #fff;
-                padding: 56px 48px;
-                border-radius: 12px;
-                box-shadow:
-                    0 1px 3px rgba(0, 0, 0, 0.04),
-                    0 4px 16px rgba(0, 0, 0, 0.06);
-                border: 1px solid rgba(0, 0, 0, 0.06);
-            }
-
-            .document-header {
-                margin-bottom: 40px;
-                padding-bottom: 32px;
-                border-bottom: 1px solid #e5e5e5;
-            }
-
-            .document-header h1 {
-                font-size: 1.75em;
-                font-weight: 700;
-                color: #111;
-                letter-spacing: -0.02em;
-                margin-bottom: 16px;
-            }
-
-            .document-meta {
-                display: grid;
-                grid-template-columns: auto 1fr;
-                gap: 4px 16px;
-                font-size: 0.875em;
-                color: #666;
-            }
-
-            .document-meta dt {
-                font-weight: 600;
-                color: #444;
-            }
-
-            .document-meta dd {
-                color: #666;
-            }
-
-            .summary-box {
-                background: #f8fafb;
-                border: 1px solid #e0e6ea;
-                border-radius: 8px;
-                padding: 20px 24px;
-                margin-bottom: 40px;
-            }
-
-            .summary-box p {
-                font-size: 0.9375em;
-                color: #333;
-                margin: 0;
-                line-height: 1.65;
-            }
-
-            .summary-box p strong {
-                color: #111;
-            }
-
-            h2 {
-                font-size: 1.25em;
-                font-weight: 700;
-                color: #111;
-                margin-top: 40px;
-                margin-bottom: 16px;
-                letter-spacing: -0.01em;
-            }
-
-            h2 .section-number {
-                color: #999;
-                font-weight: 400;
-                margin-right: 4px;
-            }
-
-            h3 {
-                font-size: 1em;
-                font-weight: 600;
-                color: #333;
-                margin-top: 24px;
-                margin-bottom: 10px;
-            }
-
-            p {
-                margin-bottom: 14px;
-                color: #444;
-                font-size: 0.9375em;
-            }
-
-            ul,
-            ol {
-                margin-left: 20px;
-                margin-bottom: 16px;
-            }
-
-            li {
-                margin-bottom: 6px;
-                color: #444;
-                font-size: 0.9375em;
-                line-height: 1.65;
-            }
-
-            li strong {
-                color: #222;
-            }
-
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 20px 0;
-                font-size: 0.875em;
-                font-variant-numeric: tabular-nums;
-            }
-
-            th,
-            td {
-                padding: 10px 14px;
-                text-align: left;
-                border-bottom: 1px solid #eee;
-            }
-
-            th {
-                background: #f7f8f9;
-                color: #333;
-                font-weight: 600;
-                font-size: 0.8125em;
-                text-transform: uppercase;
-                letter-spacing: 0.04em;
-                border-bottom: 2px solid #ddd;
-            }
-
-            td {
-                color: #444;
-            }
-
-            tr:last-child td {
-                border-bottom: none;
-            }
-
-            a {
-                color: #2563eb;
-                text-decoration: none;
-                border-bottom: 1px solid transparent;
-                transition: border-color 0.15s ease;
-            }
-
-            a:hover {
-                border-bottom-color: #2563eb;
-            }
-
-            a:focus-visible {
-                outline: 2px solid #2563eb;
-                outline-offset: 2px;
-                border-radius: 2px;
-            }
-
-            code {
-                background: #f3f4f6;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-family:
-                    "SF Mono", "Monaco", "Inconsolata", "Courier New", monospace;
-                font-size: 0.85em;
-                color: #d63384;
-            }
-
-            .notice {
-                background: #fffbeb;
-                border: 1px solid #f5e6b8;
-                border-radius: 8px;
-                padding: 16px 20px;
-                margin: 20px 0;
-                font-size: 0.9375em;
-            }
-
-            .notice p {
-                margin: 0;
-                color: #78590a;
-            }
-
-            .notice strong {
-                color: #5c4308;
-            }
-
-            .check-list {
-                list-style: none;
-                margin-left: 0;
-                padding-left: 0;
-            }
-
-            .check-list li {
-                position: relative;
-                padding-left: 24px;
-            }
-
-            .check-list li::before {
-                content: "";
-                position: absolute;
-                left: 0;
-                top: 7px;
-                width: 14px;
-                height: 14px;
-                border-radius: 50%;
-            }
-
-            .check-list.affirmative li::before {
-                background: #dcfce7;
-                border: 1.5px solid #22c55e;
-            }
-
-            .check-list.negative li::before {
-                background: #fef2f2;
-                border: 1.5px solid #ef4444;
-            }
-
-            hr {
-                border: none;
-                border-top: 1px solid #e5e5e5;
-                margin: 40px 0;
-            }
-
-            .footer {
-                margin-top: 48px;
-                padding-top: 24px;
-                border-top: 1px solid #e5e5e5;
-                text-align: center;
-            }
-
-            .footer p {
-                color: #999;
-                font-size: 0.8125em;
-                margin-bottom: 6px;
-            }
-
-            .footer .disclaimer {
-                font-size: 0.75em;
-                color: #aaa;
-                max-width: 560px;
-                margin: 12px auto 0;
-                line-height: 1.5;
-            }
-
-            @media (max-width: 640px) {
-                body {
-                    padding: 16px 12px;
-                }
-
-                .container {
-                    padding: 32px 24px;
-                }
-
-                .document-header h1 {
-                    font-size: 1.5em;
-                }
-
-                .document-meta {
-                    grid-template-columns: 1fr;
-                    gap: 2px 0;
-                }
-
-                .document-meta dt {
-                    margin-top: 6px;
-                }
-
-                table {
-                    display: block;
-                    overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <header class="document-header">
-                <h1>Privacy Policy</h1>
-                <dl class="document-meta">
-                    <dt>Effective Date</dt>
-                    <dd>February 12, 2026</dd>
-                    <dt>Extension</dt>
-                    <dd>Linear Web Clipper</dd>
-                    <dt>Developer</dt>
-                    <dd>Jinghuang Su</dd>
-                </dl>
-            </header>
-
-            <div class="summary-box">
-                <p>
-                    <strong
-                        >Linear Web Clipper does not collect, transmit, or store
-                        any user data on external servers.</strong
-                    >
-                    All configuration data remains on your device. The extension
-                    communicates only with services you explicitly
-                    configure&mdash;namely, Linear and your chosen AI
-                    provider(s).
-                </p>
-            </div>
-
-            <h2><span class="section-number">1.</span> Scope</h2>
-            <p>
-                This Privacy Policy governs the collection, use, and disclosure
-                of information by the Linear Web Clipper browser extension (the
-                &ldquo;Extension&rdquo;). By installing or using the Extension,
-                you acknowledge that you have read and understood this policy.
-            </p>
-
-            <h2>
-                <span class="section-number">2.</span> Information We Do Not
-                Collect
-            </h2>
-            <p>
-                The Extension does not collect any personally identifiable
-                information or behavioral data. Specifically, the Extension:
-            </p>
-            <ul class="check-list negative">
-                <li>
-                    Does not collect personal information or user identifiers
-                </li>
-                <li>
-                    Does not collect usage statistics, analytics, or telemetry
-                </li>
-                <li>
-                    Does not deploy cookies, tracking pixels, or similar
-                    technologies
-                </li>
-                <li>
-                    Does not transmit any data to the developer or any
-                    first-party servers
-                </li>
-                <li>Does not monitor or record browsing activity</li>
-            </ul>
-
-            <h2><span class="section-number">3.</span> Locally Stored Data</h2>
-            <p>
-                The Extension stores configuration data exclusively on your
-                device using the Chrome Storage API. This data never leaves your
-                browser unless transmitted to a service you have configured as
-                described in Section&nbsp;4.
-            </p>
-
-            <h3>3.1 Data Stored Locally</h3>
-            <ul>
-                <li>
-                    <strong>Linear API key</strong> &mdash; required to
-                    authenticate with your Linear workspace
-                </li>
-                <li>
-                    <strong>AI provider API keys</strong> &mdash; stored only if
-                    you optionally configure one or more AI providers
-                </li>
-                <li>
-                    <strong>User preferences</strong> &mdash; default team,
-                    project, label assignments, and AI provider priority order
-                </li>
-                <li>
-                    <strong>Extension settings</strong> &mdash;
-                    auto-summarization preferences and metadata display options
-                </li>
-            </ul>
-
-            <h3>3.2 Data Retention and Deletion</h3>
-            <p>
-                Locally stored data persists until you take one of the following
-                actions: (a)&nbsp;uninstall the Extension, (b)&nbsp;clear the
-                Extension&rsquo;s storage via browser settings, or
-                (c)&nbsp;reset settings within the Extension&rsquo;s options
-                page. No data survives uninstallation.
-            </p>
-
-            <h3>3.3 Security of Stored Data</h3>
-            <ul class="check-list affirmative">
-                <li>
-                    API keys are encrypted via Chrome&rsquo;s built-in storage
-                    encryption
-                </li>
-                <li>
-                    Data is sandboxed and inaccessible to other extensions or
-                    websites
-                </li>
-                <li>
-                    No data leaves your device except as described in
-                    Section&nbsp;4
-                </li>
-            </ul>
-
-            <h2>
-                <span class="section-number">4.</span> Data Transmission to
-                Third-Party Services
-            </h2>
-            <p>
-                The Extension transmits data only to services that you
-                explicitly configure with your own API credentials. All
-                transmissions occur over encrypted HTTPS/TLS connections.
-            </p>
-
-            <h3>4.1 Linear (Required)</h3>
-            <table>
-                <tr>
-                    <th>Attribute</th>
-                    <th>Detail</th>
-                </tr>
-                <tr>
-                    <td>Data transmitted</td>
-                    <td>
-                        Issue title, description (derived from page content),
-                        team ID, project ID, labels
-                    </td>
-                </tr>
-                <tr>
-                    <td>Purpose</td>
-                    <td>Create issues in your Linear workspace</td>
-                </tr>
-                <tr>
-                    <td>Trigger</td>
-                    <td>
-                        Only upon explicit user action (&ldquo;Create
-                        Issue&rdquo;)
-                    </td>
-                </tr>
-                <tr>
-                    <td>Provider policy</td>
-                    <td>
-                        <a
-                            href="https://linear.app/privacy"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            >linear.app/privacy</a
-                        >
-                    </td>
-                </tr>
-            </table>
-
-            <h3>4.2 AI Providers (Optional)</h3>
-            <p>
-                If you choose to enable AI-powered summarization, the Extension
-                will transmit page content to your selected AI provider(s) for
-                processing. You may configure one or more of the following
-                providers; when multiple providers are configured, they are
-                attempted in your specified priority order.
-            </p>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>Provider</th>
-                        <th>Data Transmitted</th>
-                        <th>Privacy Policy</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>OpenAI</td>
-                        <td>Page content for summarization</td>
-                        <td>
-                            <a
-                                href="https://openai.com/privacy"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                >openai.com/privacy</a
-                            >
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Anthropic</td>
-                        <td>Page content for summarization</td>
-                        <td>
-                            <a
-                                href="https://anthropic.com/privacy"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                >anthropic.com/privacy</a
-                            >
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Google Gemini</td>
-                        <td>Page content for summarization</td>
-                        <td>
-                            <a
-                                href="https://policies.google.com/privacy"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                >policies.google.com/privacy</a
-                            >
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>DeepSeek</td>
-                        <td>Page content for summarization</td>
-                        <td>
-                            <a
-                                href="https://www.deepseek.com/privacy"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                >deepseek.com/privacy</a
-                            >
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>xAI (Grok)</td>
-                        <td>Page content for summarization</td>
-                        <td>
-                            <a
-                                href="https://x.ai/legal/privacy-policy"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                >x.ai/legal/privacy-policy</a
-                            >
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Groq</td>
-                        <td>Page content for summarization</td>
-                        <td>
-                            <a
-                                href="https://groq.com/privacy-policy/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                >groq.com/privacy-policy</a
-                            >
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Mistral AI</td>
-                        <td>Page content for summarization</td>
-                        <td>
-                            <a
-                                href="https://mistral.ai/terms/#privacy-policy"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                >mistral.ai/terms</a
-                            >
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>OpenRouter</td>
-                        <td>Page content for summarization</td>
-                        <td>
-                            <a
-                                href="https://openrouter.ai/privacy"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                >openrouter.ai/privacy</a
-                            >
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="notice">
-                <p>
-                    <strong>Important:</strong> AI features are entirely
-                    optional and disabled by default. No content is transmitted
-                    to any AI provider unless you have explicitly provided an
-                    API key and initiated a summarization request.
-                </p>
-            </div>
-
-            <h3>4.3 Data Not Transmitted</h3>
-            <p>
-                Under no circumstances does the Extension transmit the
-                following:
-            </p>
-            <ul class="check-list negative">
-                <li>Browsing history or navigation patterns</li>
-                <li>Personal or demographic information</li>
-                <li>Usage analytics, diagnostics, or telemetry</li>
-                <li>
-                    Data to the Extension developer or any first-party
-                    infrastructure
-                </li>
-            </ul>
-
-            <h2><span class="section-number">5.</span> Permissions</h2>
-            <p>
-                The Extension requests only the browser permissions necessary
-                for its core functionality. Each permission and its
-                justification is detailed below.
-            </p>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th>Permission</th>
-                        <th>Purpose</th>
-                        <th>Scope of Access</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>sidePanel</code></td>
-                        <td>Render the clipper interface</td>
-                        <td>UI presentation only; no data access</td>
-                    </tr>
-                    <tr>
-                        <td><code>activeTab</code></td>
-                        <td>Read the current page for clipping</td>
-                        <td>Active tab only, upon user action</td>
-                    </tr>
-                    <tr>
-                        <td><code>storage</code></td>
-                        <td>Persist API keys and preferences</td>
-                        <td>Local browser storage only</td>
-                    </tr>
-                    <tr>
-                        <td><code>scripting</code></td>
-                        <td>Extract page content and metadata</td>
-                        <td>Active tab only, upon user action</td>
-                    </tr>
-                    <tr>
-                        <td><code>&lt;all_urls&gt;</code></td>
-                        <td>Enable clipping from any website</td>
-                        <td>Only pages you explicitly choose to clip</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h2><span class="section-number">6.</span> Security</h2>
-            <p>
-                The Extension implements the following measures to protect your
-                data:
-            </p>
-            <ul class="check-list affirmative">
-                <li>
-                    All API keys are encrypted via Chrome&rsquo;s built-in
-                    storage mechanism
-                </li>
-                <li>
-                    All network communication uses HTTPS with TLS encryption
-                </li>
-                <li>
-                    No data is logged, recorded, or retained by the developer
-                </li>
-                <li>
-                    The Extension does not execute remote code or load external
-                    scripts
-                </li>
-                <li>
-                    No third-party analytics, advertising, or tracking SDKs are
-                    embedded
-                </li>
-                <li>
-                    Source code is publicly available for independent security
-                    audit
-                </li>
-            </ul>
-
-            <h2><span class="section-number">7.</span> Your Rights</h2>
-            <p>
-                Because the Extension does not collect or store personal data on
-                any external server, traditional data-subject rights (such as
-                those under GDPR or CCPA) are inherently satisfied. You retain
-                full control over all data associated with the Extension:
-            </p>
-            <ul>
-                <li>
-                    <strong>Access</strong> &mdash; View all stored data through
-                    the Extension&rsquo;s settings page
-                </li>
-                <li>
-                    <strong>Deletion</strong> &mdash; Remove all data by
-                    uninstalling the Extension or clearing its storage
-                </li>
-                <li>
-                    <strong>Portability</strong> &mdash; Your API keys and
-                    preferences are accessible in browser storage
-                </li>
-                <li>
-                    <strong>Consent withdrawal</strong> &mdash; Disable or
-                    remove AI features at any time without affecting core
-                    functionality
-                </li>
-                <li>
-                    <strong>Transparency</strong> &mdash; Review the complete
-                    source code on
-                    <a
-                        href="https://github.com/jingsu96/linear-web-clipper"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >GitHub</a
-                    >
-                </li>
-            </ul>
-
-            <h2>
-                <span class="section-number">8.</span> Children&rsquo;s Privacy
-            </h2>
-            <p>
-                The Extension is not directed at individuals under the age
-                of&nbsp;13. The Extension does not knowingly collect personal
-                information from children. If you believe a child has provided
-                information through the Extension, please contact us using the
-                information in Section&nbsp;12.
-            </p>
-
-            <h2>
-                <span class="section-number">9.</span> International
-                Considerations
-            </h2>
-            <p>
-                As the Extension processes data exclusively on your local
-                device, no cross-border data transfer occurs by virtue of the
-                Extension itself. However, when you transmit data to third-party
-                services (Linear, AI providers), such data may be processed in
-                jurisdictions where those providers operate. Please consult the
-                respective provider&rsquo;s privacy policy for details on their
-                data-processing locations and safeguards.
-            </p>
-
-            <h2>
-                <span class="section-number">10.</span> Changes to This Policy
-            </h2>
-            <p>
-                We reserve the right to modify this Privacy Policy at any time.
-                Material changes will be reflected by updating the
-                &ldquo;Effective Date&rdquo; at the top of this document and,
-                where practicable, by including a notice in the
-                Extension&rsquo;s release notes. Your continued use of the
-                Extension following any changes constitutes acceptance of the
-                revised policy.
-            </p>
-
-            <h2><span class="section-number">11.</span> Open Source</h2>
-            <p>
-                The Extension is released as open-source software under the MIT
-                License. The complete source code is available for review,
-                audit, and contribution.
-            </p>
-            <ul>
-                <li>
-                    <strong>Repository:</strong>
-                    <a
-                        href="https://github.com/jingsu96/linear-web-clipper"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >github.com/jingsu96/linear-web-clipper</a
-                    >
-                </li>
-                <li>
-                    <strong>Issues:</strong>
-                    <a
-                        href="https://github.com/jingsu96/linear-web-clipper/issues"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >github.com/jingsu96/linear-web-clipper/issues</a
-                    >
-                </li>
-                <li><strong>License:</strong> MIT License</li>
-            </ul>
-
-            <h2><span class="section-number">12.</span> Contact</h2>
-            <p>
-                If you have questions, concerns, or requests regarding this
-                Privacy Policy or the Extension&rsquo;s data practices, please
-                reach out through the following channels:
-            </p>
-            <ul>
-                <li>
-                    <strong>GitHub Issues:</strong>
-                    <a
-                        href="https://github.com/jingsu96/linear-web-clipper/issues"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >Submit an issue</a
-                    >
-                </li>
-                <li><strong>Email:</strong> jing.tech.tw@gmail.com</li>
-            </ul>
-
-            <hr />
-
-            <h2>Summary</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Question</th>
-                        <th>Answer</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Does the Extension collect personal data?</td>
-                        <td>No</td>
-                    </tr>
-                    <tr>
-                        <td>Where is data stored?</td>
-                        <td>Locally on your device, encrypted by Chrome</td>
-                    </tr>
-                    <tr>
-                        <td>Who receives transmitted data?</td>
-                        <td>Only Linear and AI providers you configure</td>
-                    </tr>
-                    <tr>
-                        <td>Does the Extension track users?</td>
-                        <td>No</td>
-                    </tr>
-                    <tr>
-                        <td>Can you delete all data?</td>
-                        <td>
-                            Yes &mdash; uninstall or clear Extension storage
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Is the source code auditable?</td>
-                        <td>Yes &mdash; open source under MIT License</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <footer class="footer">
-                <p>&copy; 2026 Jinghuang Su. All rights reserved.</p>
-                <p class="disclaimer">
-                    Linear Web Clipper is an independent project and is not
-                    affiliated with, endorsed by, or officially connected with
-                    Linear, OpenAI, Anthropic, Google, DeepSeek, xAI, Groq,
-                    Mistral AI, or OpenRouter. All product names, logos, and
-                    trademarks are the property of their respective owners.
-                </p>
-            </footer>
-        </div>
-    </body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy - Linear Web Clipper</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+          "Helvetica Neue", "Arial", sans-serif;
+        line-height: 1.7;
+        color: #1a1a1a;
+        background: #fafafa;
+        padding: 40px 20px;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 56px 48px;
+        border-radius: 12px;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.04),
+          0 4px 16px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+      }
+
+      .document-header {
+        margin-bottom: 40px;
+        padding-bottom: 32px;
+        border-bottom: 1px solid #e5e5e5;
+      }
+
+      .document-header h1 {
+        font-size: 1.75em;
+        font-weight: 700;
+        color: #111;
+        letter-spacing: -0.02em;
+        margin-bottom: 16px;
+      }
+
+      .document-meta {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 16px;
+        font-size: 0.875em;
+        color: #666;
+      }
+
+      .document-meta dt {
+        font-weight: 600;
+        color: #444;
+      }
+
+      .document-meta dd {
+        color: #666;
+      }
+
+      .summary-box {
+        background: #f8fafb;
+        border: 1px solid #e0e6ea;
+        border-radius: 8px;
+        padding: 20px 24px;
+        margin-bottom: 40px;
+      }
+
+      .summary-box p {
+        font-size: 0.9375em;
+        color: #333;
+        margin: 0;
+        line-height: 1.65;
+      }
+
+      .summary-box p strong {
+        color: #111;
+      }
+
+      h2 {
+        font-size: 1.25em;
+        font-weight: 700;
+        color: #111;
+        margin-top: 40px;
+        margin-bottom: 16px;
+        letter-spacing: -0.01em;
+      }
+
+      h2 .section-number {
+        color: #999;
+        font-weight: 400;
+        margin-right: 4px;
+      }
+
+      h3 {
+        font-size: 1em;
+        font-weight: 600;
+        color: #333;
+        margin-top: 24px;
+        margin-bottom: 10px;
+      }
+
+      p {
+        margin-bottom: 14px;
+        color: #444;
+        font-size: 0.9375em;
+      }
+
+      ul,
+      ol {
+        margin-left: 20px;
+        margin-bottom: 16px;
+      }
+
+      li {
+        margin-bottom: 6px;
+        color: #444;
+        font-size: 0.9375em;
+        line-height: 1.65;
+      }
+
+      li strong {
+        color: #222;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 0.875em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      th,
+      td {
+        padding: 10px 14px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+
+      th {
+        background: #f7f8f9;
+        color: #333;
+        font-weight: 600;
+        font-size: 0.8125em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 2px solid #ddd;
+      }
+
+      td {
+        color: #444;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      a {
+        color: #2563eb;
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.15s ease;
+      }
+
+      a:hover {
+        border-bottom-color: #2563eb;
+      }
+
+      a:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
+
+      code {
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family:
+          "SF Mono", "Monaco", "Inconsolata", "Courier New", monospace;
+        font-size: 0.85em;
+        color: #d63384;
+      }
+
+      .notice {
+        background: #fffbeb;
+        border: 1px solid #f5e6b8;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 20px 0;
+        font-size: 0.9375em;
+      }
+
+      .notice p {
+        margin: 0;
+        color: #78590a;
+      }
+
+      .notice strong {
+        color: #5c4308;
+      }
+
+      .check-list {
+        list-style: none;
+        margin-left: 0;
+        padding-left: 0;
+      }
+
+      .check-list li {
+        position: relative;
+        padding-left: 24px;
+      }
+
+      .check-list li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 7px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+      }
+
+      .check-list.affirmative li::before {
+        background: #dcfce7;
+        border: 1.5px solid #22c55e;
+      }
+
+      .check-list.negative li::before {
+        background: #fef2f2;
+        border: 1.5px solid #ef4444;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid #e5e5e5;
+        margin: 40px 0;
+      }
+
+      .footer {
+        margin-top: 48px;
+        padding-top: 24px;
+        border-top: 1px solid #e5e5e5;
+        text-align: center;
+      }
+
+      .footer p {
+        color: #999;
+        font-size: 0.8125em;
+        margin-bottom: 6px;
+      }
+
+      .footer .disclaimer {
+        font-size: 0.75em;
+        color: #aaa;
+        max-width: 560px;
+        margin: 12px auto 0;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 16px 12px;
+        }
+
+        .container {
+          padding: 32px 24px;
+        }
+
+        .document-header h1 {
+          font-size: 1.5em;
+        }
+
+        .document-meta {
+          grid-template-columns: 1fr;
+          gap: 2px 0;
+        }
+
+        .document-meta dt {
+          margin-top: 6px;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header class="document-header">
+        <h1>Privacy Policy</h1>
+        <dl class="document-meta">
+          <dt>Effective Date</dt>
+          <dd>February 12, 2026</dd>
+          <dt>Extension</dt>
+          <dd>Linear Web Clipper</dd>
+          <dt>Developer</dt>
+          <dd>Jinghuang Su</dd>
+        </dl>
+      </header>
+
+      <div class="summary-box">
+        <p>
+          <strong
+            >Linear Web Clipper does not collect, transmit, or store any user
+            data on external servers.</strong
+          >
+          All configuration data remains on your device. The extension
+          communicates only with services you explicitly configure&mdash;namely,
+          Linear and your chosen AI provider(s).
+        </p>
+      </div>
+
+      <h2><span class="section-number">1.</span> Scope</h2>
+      <p>
+        This Privacy Policy governs the collection, use, and disclosure of
+        information by the Linear Web Clipper browser extension (the
+        &ldquo;Extension&rdquo;). By installing or using the Extension, you
+        acknowledge that you have read and understood this policy.
+      </p>
+
+      <h2>
+        <span class="section-number">2.</span> Information We Do Not Collect
+      </h2>
+      <p>
+        The Extension does not collect any personally identifiable information
+        or behavioral data. Specifically, the Extension:
+      </p>
+      <ul class="check-list negative">
+        <li>Does not collect personal information or user identifiers</li>
+        <li>Does not collect usage statistics, analytics, or telemetry</li>
+        <li>
+          Does not deploy cookies, tracking pixels, or similar technologies
+        </li>
+        <li>
+          Does not transmit any data to the developer or any first-party servers
+        </li>
+        <li>Does not monitor or record browsing activity</li>
+      </ul>
+
+      <h2><span class="section-number">3.</span> Locally Stored Data</h2>
+      <p>
+        The Extension stores configuration data exclusively on your device using
+        the Chrome Storage API. This data never leaves your browser unless
+        transmitted to a service you have configured as described in
+        Section&nbsp;4.
+      </p>
+
+      <h3>3.1 Data Stored Locally</h3>
+      <ul>
+        <li>
+          <strong>Linear API key</strong> &mdash; required to authenticate with
+          your Linear workspace
+        </li>
+        <li>
+          <strong>AI provider API keys</strong> &mdash; stored only if you
+          optionally configure one or more AI providers
+        </li>
+        <li>
+          <strong>User preferences</strong> &mdash; default team, project, label
+          assignments, and AI provider priority order
+        </li>
+        <li>
+          <strong>Extension settings</strong> &mdash; auto-summarization
+          preferences and metadata display options
+        </li>
+      </ul>
+
+      <h3>3.2 Data Retention and Deletion</h3>
+      <p>
+        Locally stored data persists until you take one of the following
+        actions: (a)&nbsp;uninstall the Extension, (b)&nbsp;clear the
+        Extension&rsquo;s storage via browser settings, or (c)&nbsp;reset
+        settings within the Extension&rsquo;s options page. No data survives
+        uninstallation.
+      </p>
+
+      <h3>3.3 Security of Stored Data</h3>
+      <ul class="check-list affirmative">
+        <li>
+          API keys are encrypted via Chrome&rsquo;s built-in storage encryption
+        </li>
+        <li>
+          Data is sandboxed and inaccessible to other extensions or websites
+        </li>
+        <li>
+          No data leaves your device except as described in Section&nbsp;4
+        </li>
+      </ul>
+
+      <h2>
+        <span class="section-number">4.</span> Data Transmission to Third-Party
+        Services
+      </h2>
+      <p>
+        The Extension transmits data only to services that you explicitly
+        configure with your own API credentials. All transmissions occur over
+        encrypted HTTPS/TLS connections.
+      </p>
+
+      <h3>4.1 Linear (Required)</h3>
+      <table>
+        <tr>
+          <th>Attribute</th>
+          <th>Detail</th>
+        </tr>
+        <tr>
+          <td>Data transmitted</td>
+          <td>
+            Issue title, description (derived from page content), team ID,
+            project ID, labels
+          </td>
+        </tr>
+        <tr>
+          <td>Purpose</td>
+          <td>Create issues in your Linear workspace</td>
+        </tr>
+        <tr>
+          <td>Trigger</td>
+          <td>Only upon explicit user action (&ldquo;Create Issue&rdquo;)</td>
+        </tr>
+        <tr>
+          <td>Provider policy</td>
+          <td>
+            <a
+              href="https://linear.app/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              >linear.app/privacy</a
+            >
+          </td>
+        </tr>
+      </table>
+
+      <h3>4.2 AI Providers (Optional)</h3>
+      <p>
+        If you choose to enable AI-powered summarization, the Extension will
+        transmit page content to your selected AI provider(s) for processing.
+        You may configure one or more of the following providers; when multiple
+        providers are configured, they are attempted in your specified priority
+        order.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Data Transmitted</th>
+            <th>Privacy Policy</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>OpenAI</td>
+            <td>Page content for summarization</td>
+            <td>
+              <a
+                href="https://openai.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >openai.com/privacy</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td>Anthropic</td>
+            <td>Page content for summarization</td>
+            <td>
+              <a
+                href="https://anthropic.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >anthropic.com/privacy</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td>Google Gemini</td>
+            <td>Page content for summarization</td>
+            <td>
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >policies.google.com/privacy</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td>DeepSeek</td>
+            <td>Page content for summarization</td>
+            <td>
+              <a
+                href="https://www.deepseek.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >deepseek.com/privacy</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td>xAI (Grok)</td>
+            <td>Page content for summarization</td>
+            <td>
+              <a
+                href="https://x.ai/legal/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >x.ai/legal/privacy-policy</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td>Groq</td>
+            <td>Page content for summarization</td>
+            <td>
+              <a
+                href="https://groq.com/privacy-policy/"
+                target="_blank"
+                rel="noopener noreferrer"
+                >groq.com/privacy-policy</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td>Mistral AI</td>
+            <td>Page content for summarization</td>
+            <td>
+              <a
+                href="https://mistral.ai/terms/#privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >mistral.ai/terms</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td>OpenRouter</td>
+            <td>Page content for summarization</td>
+            <td>
+              <a
+                href="https://openrouter.ai/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >openrouter.ai/privacy</a
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="notice">
+        <p>
+          <strong>Important:</strong> AI features are entirely optional and
+          disabled by default. No content is transmitted to any AI provider
+          unless you have explicitly provided an API key and initiated a
+          summarization request.
+        </p>
+      </div>
+
+      <h3>4.3 Data Not Transmitted</h3>
+      <p>Under no circumstances does the Extension transmit the following:</p>
+      <ul class="check-list negative">
+        <li>Browsing history or navigation patterns</li>
+        <li>Personal or demographic information</li>
+        <li>Usage analytics, diagnostics, or telemetry</li>
+        <li>
+          Data to the Extension developer or any first-party infrastructure
+        </li>
+      </ul>
+
+      <h2><span class="section-number">5.</span> Permissions</h2>
+      <p>
+        The Extension requests only the browser permissions necessary for its
+        core functionality. Each permission and its justification is detailed
+        below.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Permission</th>
+            <th>Purpose</th>
+            <th>Scope of Access</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>sidePanel</code></td>
+            <td>Render the clipper interface</td>
+            <td>UI presentation only; no data access</td>
+          </tr>
+          <tr>
+            <td><code>activeTab</code></td>
+            <td>Read the current page for clipping</td>
+            <td>Active tab only, upon user action</td>
+          </tr>
+          <tr>
+            <td><code>storage</code></td>
+            <td>Persist API keys and preferences</td>
+            <td>Local browser storage only</td>
+          </tr>
+          <tr>
+            <td><code>scripting</code></td>
+            <td>Extract page content and metadata</td>
+            <td>Active tab only, upon user action</td>
+          </tr>
+          <tr>
+            <td><code>&lt;all_urls&gt;</code></td>
+            <td>Enable clipping from any website</td>
+            <td>Only pages you explicitly choose to clip</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2><span class="section-number">6.</span> Security</h2>
+      <p>
+        The Extension implements the following measures to protect your data:
+      </p>
+      <ul class="check-list affirmative">
+        <li>
+          All API keys are encrypted via Chrome&rsquo;s built-in storage
+          mechanism
+        </li>
+        <li>All network communication uses HTTPS with TLS encryption</li>
+        <li>No data is logged, recorded, or retained by the developer</li>
+        <li>
+          The Extension does not execute remote code or load external scripts
+        </li>
+        <li>
+          No third-party analytics, advertising, or tracking SDKs are embedded
+        </li>
+        <li>
+          Source code is publicly available for independent security audit
+        </li>
+      </ul>
+
+      <h2><span class="section-number">7.</span> Your Rights</h2>
+      <p>
+        Because the Extension does not collect or store personal data on any
+        external server, traditional data-subject rights (such as those under
+        GDPR or CCPA) are inherently satisfied. You retain full control over all
+        data associated with the Extension:
+      </p>
+      <ul>
+        <li>
+          <strong>Access</strong> &mdash; View all stored data through the
+          Extension&rsquo;s settings page
+        </li>
+        <li>
+          <strong>Deletion</strong> &mdash; Remove all data by uninstalling the
+          Extension or clearing its storage
+        </li>
+        <li>
+          <strong>Portability</strong> &mdash; Your API keys and preferences are
+          accessible in browser storage
+        </li>
+        <li>
+          <strong>Consent withdrawal</strong> &mdash; Disable or remove AI
+          features at any time without affecting core functionality
+        </li>
+        <li>
+          <strong>Transparency</strong> &mdash; Review the complete source code
+          on
+          <a
+            href="https://github.com/jingsu96/linear-web-clipper"
+            target="_blank"
+            rel="noopener noreferrer"
+            >GitHub</a
+          >
+        </li>
+      </ul>
+
+      <h2><span class="section-number">8.</span> Children&rsquo;s Privacy</h2>
+      <p>
+        The Extension is not directed at individuals under the age of&nbsp;13.
+        The Extension does not knowingly collect personal information from
+        children. If you believe a child has provided information through the
+        Extension, please contact us using the information in Section&nbsp;12.
+      </p>
+
+      <h2>
+        <span class="section-number">9.</span> International Considerations
+      </h2>
+      <p>
+        As the Extension processes data exclusively on your local device, no
+        cross-border data transfer occurs by virtue of the Extension itself.
+        However, when you transmit data to third-party services (Linear, AI
+        providers), such data may be processed in jurisdictions where those
+        providers operate. Please consult the respective provider&rsquo;s
+        privacy policy for details on their data-processing locations and
+        safeguards.
+      </p>
+
+      <h2><span class="section-number">10.</span> Changes to This Policy</h2>
+      <p>
+        We reserve the right to modify this Privacy Policy at any time. Material
+        changes will be reflected by updating the &ldquo;Effective Date&rdquo;
+        at the top of this document and, where practicable, by including a
+        notice in the Extension&rsquo;s release notes. Your continued use of the
+        Extension following any changes constitutes acceptance of the revised
+        policy.
+      </p>
+
+      <h2><span class="section-number">11.</span> Open Source</h2>
+      <p>
+        The Extension is released as open-source software under the MIT License.
+        The complete source code is available for review, audit, and
+        contribution.
+      </p>
+      <ul>
+        <li>
+          <strong>Repository:</strong>
+          <a
+            href="https://github.com/jingsu96/linear-web-clipper"
+            target="_blank"
+            rel="noopener noreferrer"
+            >github.com/jingsu96/linear-web-clipper</a
+          >
+        </li>
+        <li>
+          <strong>Issues:</strong>
+          <a
+            href="https://github.com/jingsu96/linear-web-clipper/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            >github.com/jingsu96/linear-web-clipper/issues</a
+          >
+        </li>
+        <li><strong>License:</strong> MIT License</li>
+      </ul>
+
+      <h2><span class="section-number">12.</span> Contact</h2>
+      <p>
+        If you have questions, concerns, or requests regarding this Privacy
+        Policy or the Extension&rsquo;s data practices, please reach out through
+        the following channels:
+      </p>
+      <ul>
+        <li>
+          <strong>GitHub Issues:</strong>
+          <a
+            href="https://github.com/jingsu96/linear-web-clipper/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Submit an issue</a
+          >
+        </li>
+        <li><strong>Email:</strong> jing.tech.tw@gmail.com</li>
+      </ul>
+
+      <hr />
+
+      <h2>Summary</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>Answer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Does the Extension collect personal data?</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Where is data stored?</td>
+            <td>Locally on your device, encrypted by Chrome</td>
+          </tr>
+          <tr>
+            <td>Who receives transmitted data?</td>
+            <td>Only Linear and AI providers you configure</td>
+          </tr>
+          <tr>
+            <td>Does the Extension track users?</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Can you delete all data?</td>
+            <td>Yes &mdash; uninstall or clear Extension storage</td>
+          </tr>
+          <tr>
+            <td>Is the source code auditable?</td>
+            <td>Yes &mdash; open source under MIT License</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <footer class="footer">
+        <p>&copy; 2026 Jinghuang Su. All rights reserved.</p>
+        <p class="disclaimer">
+          Linear Web Clipper is an independent project and is not affiliated
+          with, endorsed by, or officially connected with Linear, OpenAI,
+          Anthropic, Google, DeepSeek, xAI, Groq, Mistral AI, or OpenRouter. All
+          product names, logos, and trademarks are the property of their
+          respective owners.
+        </p>
+      </footer>
+    </div>
+  </body>
 </html>

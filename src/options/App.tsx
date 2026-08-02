@@ -199,12 +199,9 @@ export default function App() {
 
   const providerConfigs = settings.aiProviderConfigs || [];
 
-  const updateConfigs = useCallback(
-    (newConfigs: AIProviderConfig[]) => {
-      setSettings((prev) => ({ ...prev, aiProviderConfigs: newConfigs }));
-    },
-    [],
-  );
+  const updateConfigs = useCallback((newConfigs: AIProviderConfig[]) => {
+    setSettings((prev) => ({ ...prev, aiProviderConfigs: newConfigs }));
+  }, []);
 
   useEffect(() => {
     loadSettings();
@@ -283,7 +280,11 @@ export default function App() {
     updateConfigs(
       providerConfigs.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     );
-    if (patch.apiKey !== undefined || patch.model !== undefined || patch.customModel !== undefined) {
+    if (
+      patch.apiKey !== undefined ||
+      patch.model !== undefined ||
+      patch.customModel !== undefined
+    ) {
       setValidationResults((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -407,9 +408,7 @@ export default function App() {
   }
 
   const usedProviders = new Set(providerConfigs.map((c) => c.provider));
-  const availableProviders = ALL_PROVIDERS.filter(
-    (p) => !usedProviders.has(p),
-  );
+  const availableProviders = ALL_PROVIDERS.filter((p) => !usedProviders.has(p));
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: "linear", label: "Linear" },
@@ -514,8 +513,8 @@ export default function App() {
             <div className="section-header">
               <h2>AI Providers</h2>
               <p className="section-description">
-                Add providers in priority order. If one fails, the next is
-                tried automatically.
+                Add providers in priority order. If one fails, the next is tried
+                automatically.
               </p>
             </div>
 
@@ -555,17 +554,13 @@ export default function App() {
                           type="button"
                           className="drag-handle"
                           aria-label={`Reorder ${meta.label}. Use arrow keys.`}
-                          onKeyDown={(e) =>
-                            handleKeyboardReorder(e, config.id)
-                          }
+                          onKeyDown={(e) => handleKeyboardReorder(e, config.id)}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <DragHandleIcon />
                         </button>
 
-                        <span className="provider-priority">
-                          {index + 1}
-                        </span>
+                        <span className="provider-priority">{index + 1}</span>
 
                         <span className="provider-name">{meta.label}</span>
 
@@ -604,9 +599,7 @@ export default function App() {
                       {isExpanded && (
                         <div className="provider-card-detail">
                           <div className="form-group">
-                            <label htmlFor={`model-${config.id}`}>
-                              Model
-                            </label>
+                            <label htmlFor={`model-${config.id}`}>Model</label>
                             <select
                               id={`model-${config.id}`}
                               value={config.model}
@@ -945,9 +938,7 @@ export default function App() {
                   disabled={!hasAnyAIConfigured(providerConfigs)}
                 />
                 <span className="checkbox-label">
-                  <span className="checkbox-title">
-                    Auto-summarize on clip
-                  </span>
+                  <span className="checkbox-title">Auto-summarize on clip</span>
                   <span className="checkbox-description">
                     {!hasAnyAIConfigured(providerConfigs)
                       ? "Configure AI provider first"
@@ -1000,9 +991,7 @@ export default function App() {
             onClick={handleSave}
             disabled={saving || !settings.linearApiKey}
           >
-            {saving && (
-              <span className="button-spinner" aria-hidden="true" />
-            )}
+            {saving && <span className="button-spinner" aria-hidden="true" />}
             {saving ? "Saving\u2026" : "Save Settings"}
           </button>
         </div>

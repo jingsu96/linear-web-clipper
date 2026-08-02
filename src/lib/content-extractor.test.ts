@@ -5,6 +5,8 @@ import {
   generatePreview,
   estimateReadingTime,
   extractEmbedUrls,
+  pickBestSrcsetCandidate,
+  getEmbeddableSourceUrl,
 } from "./content-extractor";
 
 describe("htmlToMarkdown", () => {
@@ -120,5 +122,78 @@ describe("extractEmbedUrls", () => {
 
   it("returns empty array when no embeddable URLs exist", () => {
     expect(extractEmbedUrls("plain text, no links")).toEqual([]);
+  });
+});
+
+describe("pickBestSrcsetCandidate", () => {
+  it("picks the largest width descriptor", () => {
+    expect(
+      pickBestSrcsetCandidate(
+        "https://ex.com/a-320.jpg 320w, https://ex.com/a-640.jpg 640w, https://ex.com/a-1280.jpg 1280w",
+      ),
+    ).toBe("https://ex.com/a-1280.jpg");
+  });
+
+  it("handles CDN URLs containing literal commas", () => {
+    expect(
+      pickBestSrcsetCandidate(
+        "https://cdn.ex.com/w_424,c_limit/img.png 424w, https://cdn.ex.com/w_848,c_limit/img.png 848w",
+      ),
+    ).toBe("https://cdn.ex.com/w_848,c_limit/img.png");
+  });
+
+  it("handles density descriptors", () => {
+    expect(
+      pickBestSrcsetCandidate(
+        "https://ex.com/a.jpg 1x, https://ex.com/a@2x.jpg 2x",
+      ),
+    ).toBe("https://ex.com/a@2x.jpg");
+  });
+
+  it("returns a lone URL without descriptor", () => {
+    expect(pickBestSrcsetCandidate("https://ex.com/only.jpg")).toBe(
+      "https://ex.com/only.jpg",
+    );
+  });
+
+  it("returns null for empty input", () => {
+    expect(pickBestSrcsetCandidate("")).toBe(null);
+  });
+});
+
+describe("srcset handling in htmlToMarkdown", () => {
+  it("uses the highest-resolution srcset candidate as the image source", () => {
+    const md = htmlToMarkdown(
+      '<img src="https://ex.com/small.jpg" srcset="https://ex.com/small.jpg 320w, https://ex.com/large.jpg 1600w" alt="pic">',
+    );
+    expect(md).toContain("https://ex.com/large.jpg");
+    expect(md).not.toContain("small.jpg");
+  });
+});
+
+describe("getEmbeddableSourceUrl", () => {
+  it("returns YouTube watch and short URLs", () => {
+    expect(
+      getEmbeddableSourceUrl("https://www.youtube.com/watch?v=abc123"),
+    ).toBe("https://www.youtube.com/watch?v=abc123");
+    expect(getEmbeddableSourceUrl("https://youtu.be/abc123")).toBe(
+      "https://youtu.be/abc123",
+    );
+  });
+
+  it("returns Loom and Descript share URLs", () => {
+    expect(getEmbeddableSourceUrl("https://www.loom.com/share/xyz")).toBe(
+      "https://www.loom.com/share/xyz",
+    );
+    expect(getEmbeddableSourceUrl("https://share.descript.com/view/xyz")).toBe(
+      "https://share.descript.com/view/xyz",
+    );
+  });
+
+  it("returns null for non-embeddable pages", () => {
+    expect(getEmbeddableSourceUrl("https://example.com/article")).toBe(null);
+    expect(getEmbeddableSourceUrl("https://www.youtube.com/@channel")).toBe(
+      null,
+    );
   });
 });

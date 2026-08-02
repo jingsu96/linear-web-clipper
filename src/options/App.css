@@ -216,6 +216,36 @@
   text-decoration: underline;
 }
 
+/* Model label with refresh button */
+.model-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.refresh-models {
+  font-size: 11px;
+  padding: 2px 8px;
+  min-height: 24px;
+  border: 1px solid #d5d5d9;
+  border-radius: 4px;
+  background: transparent;
+  color: #5e6ad2;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.refresh-models:hover:not(:disabled) {
+  background: rgba(94, 106, 210, 0.08);
+  border-color: #5e6ad2;
+}
+
+.refresh-models:disabled {
+  color: #8b8a94;
+  cursor: default;
+}
+
 /* Input with visibility toggle */
 .input-with-toggle {
   position: relative;

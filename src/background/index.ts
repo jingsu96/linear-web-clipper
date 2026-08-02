@@ -296,39 +296,40 @@ function extractPageContent() {
       articleElement = document.body;
     }
 
-    // Clone the content to avoid modifying
+    // Clone the content to avoid modifying the page
     const clonedContent = articleElement.cloneNode(true) as HTMLElement;
 
-    // Remove unwanted elements
+    const countWords = (el: HTMLElement) =>
+      (el.textContent || "").trim().split(/\s+/).filter(Boolean).length;
+    const wordsBeforeCleanup = countWords(clonedContent);
+
+    // Pass 1: remove unambiguous clutter by selector. Deliberately
+    // conservative — wildcard matches like [class*="comment"] or removing
+    // sections by heading keywords deletes legitimate content (articles
+    // about code comments, papers with "Discussion" sections, anything
+    // after a "Summary" heading).
     const selectorsToRemove = [
       "script",
       "style",
+      "noscript",
       "nav",
       "header",
       "footer",
+      "aside",
       ".advertisement",
       ".ad",
+      ".ads",
       ".social-share",
+      ".share-buttons",
+      ".newsletter-signup",
       ".comments",
-      ".comment",
+      ".comments-section",
       ".comment-section",
       ".comment-list",
       ".comment-area",
-      ".comments-section",
       "#comments",
-      "#comment",
       "#disqus_thread",
       "#discourse-comments",
-      '[id*="comment" i]',
-      '[class*="comment" i]',
-      "#references",
-      ".references",
-      '[id*="reference" i]',
-      '[class*="reference" i]',
-      "#see-also",
-      "#external-links",
-      "#further-reading",
-      "#bibliography",
       ".mw-references-wrap", // Wikipedia references
       ".reflist", // Wikipedia reference list
     ];
@@ -337,117 +338,63 @@ function extractPageContent() {
       clonedContent.querySelectorAll(selector).forEach((el) => el.remove());
     });
 
-    // Find conclusion section and remove everything after it
-    const allHeadings = Array.from(
-      clonedContent.querySelectorAll("h1, h2, h3, h4, h5, h6"),
-    );
-    let conclusionIndex = -1;
-
-    // First pass: find the conclusion heading
-    for (let i = 0; i < allHeadings.length; i++) {
-      const heading = allHeadings[i];
-      const text = heading.textContent?.toLowerCase() || "";
-      if (
-        text.includes("conclusion") ||
-        text.includes("summary") ||
-        text.includes("in summary") ||
-        text.includes("to sum up") ||
-        text.includes("in conclusion") ||
-        text.includes("final thoughts") ||
-        text.includes("wrapping up") ||
-        text.includes("takeaway") ||
-        text.includes("key points")
-      ) {
-        conclusionIndex = i;
-        break;
-      }
-    }
-
-    // If we found a conclusion, find the next same-level heading and remove everything from there
-    if (conclusionIndex >= 0) {
-      const conclusionHeading = allHeadings[conclusionIndex] as HTMLElement;
-      const conclusionLevel = parseInt(conclusionHeading.tagName.substring(1));
-
-      // Find the next heading at the same level or higher
-      for (let i = conclusionIndex + 1; i < allHeadings.length; i++) {
-        const nextHeading = allHeadings[i] as HTMLElement;
-        const nextLevel = parseInt(nextHeading.tagName.substring(1));
-
-        if (nextLevel <= conclusionLevel) {
-          // Remove this heading and everything after it
-          let toRemove: Element | null = nextHeading;
-          while (toRemove) {
-            const nextSibling = toRemove.nextSibling as Element | null;
-            toRemove.remove();
-            toRemove = nextSibling;
+    // Pass 2: remove elements the site itself hides on small screens.
+    // Rules like `@media (max-width: 768px) { .sidebar { display: none } }`
+    // are a strong clutter signal, and only the live page (not a clone or
+    // parser) exposes its stylesheets — technique borrowed from Defuddle.
+    try {
+      const mobileHiddenSelectors: string[] = [];
+      for (const sheet of Array.from(document.styleSheets)) {
+        let rules: CSSRuleList;
+        try {
+          rules = sheet.cssRules; // cross-origin stylesheets throw
+        } catch {
+          continue;
+        }
+        for (const rule of Array.from(rules)) {
+          if (!(rule instanceof CSSMediaRule)) continue;
+          const condition = rule.conditionText || rule.media.mediaText;
+          const maxWidth = condition.match(/max-width:\s*(\d+)/);
+          if (!maxWidth || parseInt(maxWidth[1], 10) < 600) continue;
+          for (const inner of Array.from(rule.cssRules)) {
+            if (
+              inner instanceof CSSStyleRule &&
+              inner.style.display === "none" &&
+              inner.selectorText &&
+              inner.selectorText.length < 200
+            ) {
+              mobileHiddenSelectors.push(inner.selectorText);
+            }
           }
-          break;
         }
       }
+      for (const selector of mobileHiddenSelectors) {
+        try {
+          clonedContent.querySelectorAll(selector).forEach((el) => el.remove());
+        } catch {
+          // selector may not be valid outside its stylesheet context
+        }
+      }
+    } catch {
+      // stylesheet scan is best-effort
     }
 
-    // Second pass: Remove other unwanted sections
-    const remainingHeadings = clonedContent.querySelectorAll(
-      "h1, h2, h3, h4, h5, h6",
-    );
-    remainingHeadings.forEach((heading) => {
-      const text = heading.textContent?.toLowerCase() || "";
-
-      if (
-        text.includes("reference") ||
-        text.includes("see also") ||
-        text.includes("external link") ||
-        text.includes("further reading") ||
-        text.includes("bibliography") ||
-        text.includes("citation") ||
-        text.includes("notes") ||
-        text.includes("comment") ||
-        text.includes("discussion") ||
-        text.includes("leave a reply") ||
-        text.includes("post a comment") ||
-        text.includes("add comment")
-      ) {
-        // Remove the heading and all content until the next heading or end
-        let current = heading.nextElementSibling;
-        heading.remove();
-        while (current && !current.matches("h1, h2, h3, h4, h5, h6")) {
-          const next = current.nextElementSibling;
-          current.remove();
-          current = next;
-        }
-      }
-    });
-
-    // Additional comment detection: Look for elements with "comment" in their text content
-    // Only remove if it looks like a comment section (multiple comment elements or large blocks)
-    const allElements = clonedContent.querySelectorAll("*");
-    allElements.forEach((element) => {
-      const text = element.textContent?.toLowerCase() || "";
-      const id = element.id?.toLowerCase() || "";
-      const className = element.className?.toString().toLowerCase() || "";
-
-      // Check if element or its attributes contain comment-related keywords
-      const hasCommentKeyword =
-        id.includes("comment") ||
-        className.includes("comment") ||
-        (text.includes("comment") && text.length < 100); // Short text with "comment"
-
-      // Check if it's a comment form or container
-      const isCommentContainer =
-        element.tagName === "FORM" ||
-        element.querySelector('textarea[placeholder*="comment" i]') !== null ||
-        element.querySelector('input[placeholder*="comment" i]') !== null;
-
-      if (hasCommentKeyword || isCommentContainer) {
-        element.remove();
-      }
-    });
+    // Graduated fallback: if cleanup gutted a page that had real content,
+    // fall back to the un-cleaned extraction rather than losing the article
+    let finalContent = clonedContent;
+    if (countWords(clonedContent) < 50 && wordsBeforeCleanup >= 50) {
+      finalContent = articleElement.cloneNode(true) as HTMLElement;
+      finalContent
+        .querySelectorAll("script, style, noscript")
+        .forEach((el) => el.remove());
+    }
 
     // Get the HTML content
-    const htmlContent = clonedContent.innerHTML;
+    const htmlContent = finalContent.innerHTML;
 
     // Get text content as fallback
-    const textContent = clonedContent.innerText;
+    const textContent =
+      finalContent.innerText || finalContent.textContent || "";
 
     // Get meta description
     const metaDescription =

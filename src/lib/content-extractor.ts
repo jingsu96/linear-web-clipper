@@ -475,6 +475,48 @@ export function htmlToMarkdown(html: string, baseUrl?: string): string {
 }
 
 /**
+ * Pick the highest-resolution candidate from a srcset attribute.
+ * Tokenizes on whitespace rather than splitting on commas, because CDN
+ * URLs frequently contain literal commas (e.g. `.../w_424,c_limit/...`).
+ * Exported for testing.
+ */
+export function pickBestSrcsetCandidate(srcset: string): string | null {
+  // A descriptor-less candidate defaults to 1x density; weight density
+  // descriptors so 2x beats explicit widths below ~2560px
+  const DENSITY_WEIGHT = 1280;
+
+  let bestUrl: string | null = null;
+  let bestScore = -1;
+  let pendingUrl: string | null = null;
+
+  const commit = (score: number) => {
+    if (pendingUrl && score > bestScore) {
+      bestScore = score;
+      bestUrl = pendingUrl;
+    }
+    pendingUrl = null;
+  };
+
+  for (const raw of srcset.trim().split(/\s+/)) {
+    const token = raw.replace(/,+$/, "");
+    if (!token) continue;
+
+    const descriptor = token.match(/^(\d+(?:\.\d+)?)([wx])$/);
+    if (descriptor && pendingUrl) {
+      const value = parseFloat(descriptor[1]);
+      commit(descriptor[2] === "w" ? value : value * DENSITY_WEIGHT);
+    } else {
+      // New URL token; any pending URL had no descriptor (implicit 1x)
+      if (pendingUrl) commit(DENSITY_WEIGHT);
+      pendingUrl = token;
+    }
+  }
+  if (pendingUrl) commit(DENSITY_WEIGHT);
+
+  return bestUrl;
+}
+
+/**
  * Pre-process HTML before conversion
  */
 function preprocessHtml(html: string, baseUrl?: string): string {
@@ -536,11 +578,21 @@ function preprocessHtml(html: string, baseUrl?: string): string {
     }
   });
 
-  // Convert data-src to src for lazy-loaded images
-  doc.querySelectorAll("img[data-src]").forEach((img) => {
-    const dataSrc = img.getAttribute("data-src");
-    if (dataSrc && !img.getAttribute("src")) {
-      img.setAttribute("src", dataSrc);
+  // Normalize image sources: lazy-load attributes and best srcset candidate
+  doc.querySelectorAll("img").forEach((img) => {
+    if (!img.getAttribute("src")) {
+      const lazySrc =
+        img.getAttribute("data-src") ||
+        img.getAttribute("data-lazy-src") ||
+        img.getAttribute("data-original");
+      if (lazySrc) img.setAttribute("src", lazySrc);
+    }
+
+    const srcset =
+      img.getAttribute("srcset") || img.getAttribute("data-srcset");
+    if (srcset) {
+      const best = pickBestSrcsetCandidate(srcset);
+      if (best) img.setAttribute("src", best);
     }
   });
 
@@ -608,6 +660,22 @@ function cleanMarkdown(markdown: string): string {
 }
 
 /**
+ * If the source URL itself is Linear-embeddable media (a YouTube video,
+ * Loom recording, or Descript share), return it so it can be placed on its
+ * own line — Linear renders bare URLs from these platforms as embeds,
+ * while markdown links suppress embedding.
+ */
+export function getEmbeddableSourceUrl(url: string): string | null {
+  const embeddablePatterns = [
+    /youtube\.com\/watch/i,
+    /youtu\.be\//i,
+    /loom\.com\/share\//i,
+    /share\.descript\.com\//i,
+  ];
+  return embeddablePatterns.some((p) => p.test(url)) ? url : null;
+}
+
+/**
  * Format extracted content as markdown with optional metadata header
  */
 export function formatAsMarkdown(
@@ -626,6 +694,13 @@ export function formatAsMarkdown(
       parts.push("");
     }
 
+    // Bare URL on its own line so Linear embeds the source video player
+    const embeddableSource = getEmbeddableSourceUrl(content.url);
+    if (embeddableSource) {
+      parts.push(embeddableSource);
+      parts.push("");
+    }
+
     parts.push("---");
     parts.push("");
   }
@@ -634,280 +709,6 @@ export function formatAsMarkdown(
   parts.push(markdownContent);
 
   return parts.join("\n");
-}
-
-/**
- * Selectors for main content detection, ordered by specificity
- */
-const MAIN_CONTENT_SELECTORS = [
-  // Semantic HTML5
-  'article[role="main"]',
-  "main article",
-  "article",
-  "main",
-  '[role="main"]',
-  // Common content class patterns
-  ".post-content",
-  ".article-content",
-  ".article-body",
-  ".entry-content",
-  ".content-body",
-  ".post-body",
-  ".story-body",
-  ".blog-post",
-  ".blog-content",
-  // CMS-specific
-  ".markdown-body", // GitHub
-  ".notion-page-content", // Notion
-  ".medium-content", // Medium-style
-  ".wp-content", // WordPress
-  ".prose", // Tailwind prose
-  // Generic fallbacks
-  "#content",
-  "#main-content",
-  "#article",
-  ".content",
-];
-
-/**
- * Selectors for elements to remove from content
- */
-const REMOVE_SELECTORS = [
-  // Navigation & structure
-  "nav",
-  "header",
-  "footer",
-  "aside",
-  '[role="navigation"]',
-  '[role="banner"]',
-  '[role="contentinfo"]',
-  // Ads & promotions
-  ".ad",
-  ".ads",
-  ".advertisement",
-  ".sponsored",
-  '[class*="advert"]',
-  '[id*="advert"]',
-  ".promo",
-  ".promotion",
-  ".banner",
-  // Social & sharing
-  ".social-share",
-  ".share-buttons",
-  ".social-links",
-  ".follow-us",
-  ".newsletter-signup",
-  // Comments
-  ".comments",
-  ".comment-section",
-  "#comments",
-  "#disqus_thread",
-  '[class*="comment"]',
-  '[id*="comment"]',
-  // Related content
-  ".related-posts",
-  ".related-articles",
-  ".related-content",
-  ".related",
-  ".recommended",
-  ".recommendations",
-  ".more-stories",
-  ".more-articles",
-  ".read-next",
-  ".read-more",
-  ".you-might-like",
-  ".also-like",
-  ".popular-posts",
-  ".trending",
-  ".latest-posts",
-  ".recent-posts",
-  '[class*="related"]',
-  '[class*="recommend"]',
-  // Popups & overlays
-  ".modal",
-  ".popup",
-  ".overlay",
-  ".tooltip",
-  // Print & accessibility helpers
-  ".screen-reader-text",
-  ".visually-hidden",
-  ".sr-only",
-  // Metadata & tags
-  ".tags",
-  ".categories",
-  ".meta",
-  ".byline",
-  ".author-bio",
-  ".author-box",
-  // Navigation within article
-  ".breadcrumb",
-  ".breadcrumbs",
-  ".pagination",
-  ".table-of-contents",
-  ".toc",
-];
-
-/**
- * Extract main content from HTML document
- * Uses heuristics to identify the primary content area
- */
-export function extractMainContent(html: string): string {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-
-  // First, try to find main content using semantic selectors
-  for (const selector of MAIN_CONTENT_SELECTORS) {
-    const element = doc.querySelector(selector);
-    if (element && isSubstantialContent(element)) {
-      return cleanContentElement(element.cloneNode(true) as HTMLElement)
-        .innerHTML;
-    }
-  }
-
-  // Fallback: find the element with the most paragraph text content
-  const candidates = doc.querySelectorAll("div, section, article");
-  let bestCandidate: Element | null = null;
-  let bestScore = 0;
-
-  candidates.forEach((candidate) => {
-    const score = scoreContentElement(candidate);
-    if (score > bestScore) {
-      bestScore = score;
-      bestCandidate = candidate;
-    }
-  });
-
-  if (bestCandidate !== null && bestScore > 100) {
-    return cleanContentElement(
-      (bestCandidate as Element).cloneNode(true) as HTMLElement,
-    ).innerHTML;
-  }
-
-  // Last resort: use body
-  return cleanContentElement(doc.body.cloneNode(true) as HTMLElement).innerHTML;
-}
-
-/**
- * Check if element contains substantial content
- */
-function isSubstantialContent(element: Element): boolean {
-  const text = element.textContent || "";
-  const wordCount = text.trim().split(/\s+/).length;
-  const paragraphs = element.querySelectorAll("p").length;
-
-  return wordCount > 50 || paragraphs > 1;
-}
-
-/**
- * Score an element based on content quality indicators
- */
-function scoreContentElement(element: Element): number {
-  let score = 0;
-
-  // Count paragraphs with substantial text
-  element.querySelectorAll("p").forEach((p) => {
-    const text = p.textContent?.trim() || "";
-    if (text.length > 25) score += text.length / 10;
-  });
-
-  // Boost for headings
-  score += element.querySelectorAll("h1, h2, h3").length * 10;
-
-  // Boost for code blocks
-  score += element.querySelectorAll("pre, code").length * 5;
-
-  // Boost for images with alt text
-  element.querySelectorAll("img[alt]").forEach((img) => {
-    if ((img as HTMLImageElement).alt.length > 5) score += 5;
-  });
-
-  // Penalty for too many links (likely navigation)
-  const links = element.querySelectorAll("a").length;
-  const text = element.textContent?.length || 1;
-  const linkDensity = links / (text / 100);
-  if (linkDensity > 0.5) score *= 0.5;
-
-  // Penalty for short content
-  if (text < 200) score *= 0.5;
-
-  return score;
-}
-
-/**
- * Clean content element by removing unwanted child elements
- */
-function cleanContentElement(element: HTMLElement): HTMLElement {
-  // Remove unwanted elements
-  REMOVE_SELECTORS.forEach((selector) => {
-    element.querySelectorAll(selector).forEach((el) => el.remove());
-  });
-
-  // Remove elements with certain keywords in class/id
-  const keywordPatterns = [
-    /sidebar/i,
-    /widget/i,
-    /popup/i,
-    /modal/i,
-    /overlay/i,
-    /newsletter/i,
-    /subscribe/i,
-    /signup/i,
-    /sign-up/i,
-  ];
-
-  element.querySelectorAll("*").forEach((el) => {
-    const className = el.className?.toString() || "";
-    const id = el.id || "";
-    for (const pattern of keywordPatterns) {
-      if (pattern.test(className) || pattern.test(id)) {
-        el.remove();
-        break;
-      }
-    }
-  });
-
-  // Remove empty elements
-  element.querySelectorAll("div, span, p").forEach((el) => {
-    if (
-      !el.textContent?.trim() &&
-      !el.querySelector("img, video, iframe, embed, svg")
-    ) {
-      el.remove();
-    }
-  });
-
-  // Remove link lists (lists where items are primarily links, often "related posts")
-  element.querySelectorAll("ul, ol").forEach((list) => {
-    const items = list.querySelectorAll("li");
-    if (items.length === 0) return;
-
-    let linkOnlyItems = 0;
-    items.forEach((item) => {
-      const links = item.querySelectorAll("a");
-      const headings = item.querySelectorAll("h1, h2, h3, h4, h5, h6");
-      const itemText = item.textContent?.trim() || "";
-      const linkText = Array.from(links)
-        .map((a) => a.textContent?.trim() || "")
-        .join("");
-
-      // Check if item is mostly a link (with optional heading inside)
-      if (
-        links.length > 0 &&
-        (headings.length > 0 ||
-          linkText.length > itemText.length * 0.7 ||
-          itemText.length < 100)
-      ) {
-        linkOnlyItems++;
-      }
-    });
-
-    // If most items are link-only, remove the whole list
-    if (linkOnlyItems > items.length * 0.6) {
-      list.remove();
-    }
-  });
-
-  return element;
 }
 
 /**
